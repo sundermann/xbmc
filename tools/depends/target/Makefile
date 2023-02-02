@@ -58,6 +58,10 @@ ifeq ($(NEED_LIBICONV),1)
   ICONV = libiconv
 endif
 
+ifeq ($(TARGET_WEBOS),1)
+  DEPENDS += webos-wayland-extensions
+endif
+
 ALSA_LIB=
 ifeq ($(OS),linux)
   DEPENDS += dbus libuuid alsa-lib libdrm libxkbcommon libinput libudev libevdev mtdev wayland waylandpp wayland-protocols linux-system-x11-libs

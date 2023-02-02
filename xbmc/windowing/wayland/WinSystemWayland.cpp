@@ -53,6 +53,10 @@
 # include "windowing/linux/OSScreenSaverFreedesktop.h"
 #endif
 
+#ifdef TARGET_WEBOS
+  #include "ShellSurfaceWebOSShell.h"
+#endif
+
 using namespace KODI::WINDOWING;
 using namespace KODI::WINDOWING::WAYLAND;
 using namespace std::placeholders;
@@ -307,8 +311,13 @@ bool CWinSystemWayland::CreateNewWindow(const std::string& name,
   if (!m_shellSurface)
   {
     CLog::LogF(LOGWARNING, "Compositor does not support xdg_shell protocol (stable or unstable v6) - falling back to wl_shell, not all features might work");
-    m_shellSurface.reset(new CShellSurfaceWlShell(*this, *m_connection, m_surface, name,
+    #ifdef TARGET_WEBOS
+      m_shellSurface.reset(new CShellSurfaceWebOSShell(*this, *m_connection, m_surface, name,
                                                   std::string(CCompileInfo::GetAppName())));
+    #else
+      m_shellSurface.reset(new CShellSurfaceWlShell(*this, *m_connection, m_surface, name,
+                                                  std::string(CCompileInfo::GetAppName())));
+    #endif
   }
 
   if (fullScreen)

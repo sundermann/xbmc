@@ -8,6 +8,9 @@ elseif(APP_RENDER_SYSTEM STREQUAL "gles")
 endif()
 
 set(PLATFORM_GLOBAL_TARGET_DEPS generate-wayland-extra-protocols)
+if(TARGET_WEBOS)
+  list(APPEND PLATFORM_GLOBAL_TARGET_DEPS generate-wayland-webos-protocols)
+endif()
 set(WAYLAND_EXTRA_PROTOCOL_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
 # for wayland-extra-protocols.hpp

@@ -1,0 +1,138 @@
+/*
+ *  Copyright (C) 2017-2018 Team Kodi
+ *  This file is part of Kodi - https://kodi.tv
+ *
+ *  SPDX-License-Identifier: GPL-2.0-or-later
+ *  See LICENSES/README.md for more information.
+ */
+
+#include "ShellSurfaceWebOSShell.h"
+
+#include "Registry.h"
+
+#include "utils/log.h"
+
+using namespace KODI::WINDOWING::WAYLAND;
+using namespace std::placeholders;
+
+using namespace wayland;
+
+/*
+  WebOS always is 1920x1080
+*/
+#define WEBOS_UI_WIDTH 1920
+#define WEBOS_UI_HEIGHT 1080
+
+CShellSurfaceWebOSShell::CShellSurfaceWebOSShell(IShellSurfaceHandler& handler,
+                                           CConnection& connection,
+                                           const wayland::surface_t& surface,
+                                           const std::string& title,
+                                           const std::string& class_)
+  : m_handler{handler}
+{
+  {
+    CRegistry registry{connection};
+    registry.RequestSingleton(m_shell, 1, 1);
+    registry.RequestSingleton(m_webos_shell, 1, 2);
+    registry.Bind();
+  }
+
+  m_shellSurface = m_shell.get_shell_surface(surface);
+
+  m_webos_shellSurface = m_webos_shell.get_shell_surface(surface);
+
+  m_webos_shellSurface.on_state_changed() = [this](std::uint32_t state) {
+    switch(state)
+    {
+      case (std::uint32_t)webos_shell_surface_state::fullscreen:
+        CLog::Log(LOGDEBUG, "webOS notification - Changed to full screen");
+        m_handler.OnConfigure(0, {WEBOS_UI_WIDTH, WEBOS_UI_HEIGHT}, m_surfaceState);
+        break;
+      case (std::uint32_t)webos_shell_surface_state::minimized:
+        CLog::Log(LOGDEBUG, "webOS notification - Changed to minimized");
+        break;
+    }
+  };
+
+  m_webos_shellSurface.on_close() = [this]() {
+    CLog::Log(LOGDEBUG, "webOS notification - Close notification received");
+    m_handler.OnClose();
+  };
+
+  const char *appId = NULL, *displayId = NULL;
+
+  if((appId = getenv("APP_ID")) == NULL) {
+    appId = "org.xbmc.kodi";
+  }
+
+  if((displayId = getenv("DISPLAY_ID")) == NULL) {
+    displayId = "0";
+  }
+
+  CLog::Log(LOGDEBUG, "Passing appId {} and displayAffinity {} to wl_webos_shell", appId, displayId);
+  m_webos_shellSurface.set_property("appId", appId);
+  m_webos_shellSurface.set_property("displayAffinity", displayId);
+
+  // Allow the back button the LG remote to be passed to Kodi and not intercepted
+  m_webos_shellSurface.set_property("_WEBOS_ACCESS_POLICY_KEYS_BACK", "true");
+
+  m_surfaceState.set(STATE_ACTIVATED);
+  m_shellSurface.set_class(class_);
+  m_shellSurface.set_title(title);
+}
+
+void CShellSurfaceWebOSShell::AckConfigure(std::uint32_t)
+{
+}
+
+void CShellSurfaceWebOSShell::Initialize()
+{
+  // Nothing to do here - constructor already handles it
+  // This is not a problem since the constructor is guaranteed not to call
+  // handler functions since the event loop is not running.
+}
+
+void CShellSurfaceWebOSShell::SetFullScreen(const wayland::output_t& output, float refreshRate)
+{
+  m_shellSurface.set_fullscreen(wayland::shell_surface_fullscreen_method::driver, std::round(refreshRate * 1000.0f), output);
+  m_surfaceState.set(STATE_FULLSCREEN);
+}
+
+void CShellSurfaceWebOSShell::SetWindowed()
+{
+  m_shellSurface.set_toplevel();
+  m_surfaceState.reset(STATE_FULLSCREEN);
+}
+
+void CShellSurfaceWebOSShell::SetMaximized()
+{
+  m_shellSurface.set_maximized(wayland::output_t());
+  m_surfaceState.set(STATE_MAXIMIZED);
+}
+
+void CShellSurfaceWebOSShell::UnsetMaximized()
+{
+  m_surfaceState.reset(STATE_MAXIMIZED);
+}
+
+void CShellSurfaceWebOSShell::SetMinimized()
+{
+}
+
+void CShellSurfaceWebOSShell::SetWindowGeometry(CRectInt)
+{
+}
+
+void CShellSurfaceWebOSShell::StartMove(const wayland::seat_t& seat, std::uint32_t serial)
+{
+  m_shellSurface.move(seat, serial);
+}
+
+void CShellSurfaceWebOSShell::StartResize(const wayland::seat_t& seat, std::uint32_t serial, wayland::shell_surface_resize edge)
+{
+  m_shellSurface.resize(seat, serial, edge);
+}
+
+void CShellSurfaceWebOSShell::ShowShellContextMenu(const wayland::seat_t&, std::uint32_t, CPointInt)
+{
+}
