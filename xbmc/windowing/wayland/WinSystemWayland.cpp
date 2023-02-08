@@ -54,7 +54,7 @@
 #endif
 
 #ifdef TARGET_WEBOS
-  #include "ShellSurfaceWebOSShell.h"
+#include "ShellSurfaceWebOSShell.h"
 #endif
 
 using namespace KODI::WINDOWING;
@@ -311,13 +311,13 @@ bool CWinSystemWayland::CreateNewWindow(const std::string& name,
   if (!m_shellSurface)
   {
     CLog::LogF(LOGWARNING, "Compositor does not support xdg_shell protocol (stable or unstable v6) - falling back to wl_shell, not all features might work");
-    #ifdef TARGET_WEBOS
-      m_shellSurface.reset(new CShellSurfaceWebOSShell(*this, *m_connection, m_surface, name,
+#ifdef TARGET_WEBOS
+    m_shellSurface.reset(new CShellSurfaceWebOSShell(*this, *m_connection, m_surface, name,
+                                                     std::string(CCompileInfo::GetAppName())));
+#else
+    m_shellSurface.reset(new CShellSurfaceWlShell(*this, *m_connection, m_surface, name,
                                                   std::string(CCompileInfo::GetAppName())));
-    #else
-      m_shellSurface.reset(new CShellSurfaceWlShell(*this, *m_connection, m_surface, name,
-                                                  std::string(CCompileInfo::GetAppName())));
-    #endif
+#endif
   }
 
   if (fullScreen)

@@ -9,7 +9,6 @@
 #include "ShellSurfaceWebOSShell.h"
 
 #include "Registry.h"
-
 #include "utils/log.h"
 
 using namespace KODI::WINDOWING::WAYLAND;
@@ -24,10 +23,10 @@ using namespace wayland;
 #define WEBOS_UI_HEIGHT 1080
 
 CShellSurfaceWebOSShell::CShellSurfaceWebOSShell(IShellSurfaceHandler& handler,
-                                           CConnection& connection,
-                                           const wayland::surface_t& surface,
-                                           const std::string& title,
-                                           const std::string& class_)
+                                                 CConnection& connection,
+                                                 const wayland::surface_t& surface,
+                                                 const std::string& title,
+                                                 const std::string& class_)
   : m_handler{handler}
 {
   {
@@ -42,7 +41,7 @@ CShellSurfaceWebOSShell::CShellSurfaceWebOSShell(IShellSurfaceHandler& handler,
   m_webos_shellSurface = m_webos_shell.get_shell_surface(surface);
 
   m_webos_shellSurface.on_state_changed() = [this](std::uint32_t state) {
-    switch(state)
+    switch (state)
     {
       case (std::uint32_t)webos_shell_surface_state::fullscreen:
         CLog::Log(LOGDEBUG, "webOS notification - Changed to full screen");
@@ -61,15 +60,18 @@ CShellSurfaceWebOSShell::CShellSurfaceWebOSShell(IShellSurfaceHandler& handler,
 
   const char *appId = NULL, *displayId = NULL;
 
-  if((appId = getenv("APP_ID")) == NULL) {
+  if ((appId = getenv("APP_ID")) == NULL)
+  {
     appId = "org.xbmc.kodi";
   }
 
-  if((displayId = getenv("DISPLAY_ID")) == NULL) {
+  if ((displayId = getenv("DISPLAY_ID")) == NULL)
+  {
     displayId = "0";
   }
 
-  CLog::Log(LOGDEBUG, "Passing appId {} and displayAffinity {} to wl_webos_shell", appId, displayId);
+  CLog::Log(LOGDEBUG, "Passing appId {} and displayAffinity {} to wl_webos_shell", appId,
+            displayId);
   m_webos_shellSurface.set_property("appId", appId);
   m_webos_shellSurface.set_property("displayAffinity", displayId);
 
@@ -94,7 +96,8 @@ void CShellSurfaceWebOSShell::Initialize()
 
 void CShellSurfaceWebOSShell::SetFullScreen(const wayland::output_t& output, float refreshRate)
 {
-  m_shellSurface.set_fullscreen(wayland::shell_surface_fullscreen_method::driver, std::round(refreshRate * 1000.0f), output);
+  m_shellSurface.set_fullscreen(wayland::shell_surface_fullscreen_method::driver,
+                                std::round(refreshRate * 1000.0f), output);
   m_surfaceState.set(STATE_FULLSCREEN);
 }
 
@@ -128,7 +131,9 @@ void CShellSurfaceWebOSShell::StartMove(const wayland::seat_t& seat, std::uint32
   m_shellSurface.move(seat, serial);
 }
 
-void CShellSurfaceWebOSShell::StartResize(const wayland::seat_t& seat, std::uint32_t serial, wayland::shell_surface_resize edge)
+void CShellSurfaceWebOSShell::StartResize(const wayland::seat_t& seat,
+                                          std::uint32_t serial,
+                                          wayland::shell_surface_resize edge)
 {
   m_shellSurface.resize(seat, serial, edge);
 }

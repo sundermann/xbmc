@@ -10,7 +10,6 @@
 
 #include "Connection.h"
 #include "ShellSurface.h"
-
 #include "wayland-webos-protocols.hpp"
 
 namespace KODI
@@ -34,10 +33,10 @@ public:
    *               .desktop file of the application
    */
   CShellSurfaceWebOSShell(IShellSurfaceHandler& handler,
-                       CConnection& connection,
-                       wayland::surface_t const& surface,
-                       const std::string& title,
-                       const std::string& class_);
+                          CConnection& connection,
+                          wayland::surface_t const& surface,
+                          const std::string& title,
+                          const std::string& class_);
 
   void Initialize() override;
 
@@ -50,8 +49,12 @@ public:
   void AckConfigure(std::uint32_t serial) override;
 
   void StartMove(const wayland::seat_t& seat, std::uint32_t serial) override;
-  void StartResize(const wayland::seat_t& seat, std::uint32_t serial, wayland::shell_surface_resize edge) override;
-  void ShowShellContextMenu(const wayland::seat_t& seat, std::uint32_t serial, CPointInt position) override;
+  void StartResize(const wayland::seat_t& seat,
+                   std::uint32_t serial,
+                   wayland::shell_surface_resize edge) override;
+  void ShowShellContextMenu(const wayland::seat_t& seat,
+                            std::uint32_t serial,
+                            CPointInt position) override;
 
 private:
   IShellSurfaceHandler& m_handler;
@@ -62,6 +65,6 @@ private:
   wayland::webos_shell_surface_t m_webos_shellSurface;
 };
 
-}
-}
-}
+} // namespace WAYLAND
+} // namespace WINDOWING
+} // namespace KODI
