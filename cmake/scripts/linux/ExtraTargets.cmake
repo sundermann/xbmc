@@ -28,7 +28,7 @@ if("wayland" IN_LIST CORE_PLATFORM_NAME_LC)
                      COMMENT "Generating wayland-protocols C++ wrappers")
 
   if(TARGET_WEBOS)
-    set(WEBOS_PROTOCOL_XMLS "${datarootdir}/webos-wayland-extensions/webos-shell.xml")
+    set(WEBOS_PROTOCOL_XMLS "${WAYLAND_PROTOCOLS_DIR}/../wayland-webos/webos-shell.xml")
     add_custom_command(OUTPUT "${WAYLAND_EXTRA_PROTOCOL_GENERATED_DIR}/wayland-webos-protocols.hpp" "${WAYLAND_EXTRA_PROTOCOL_GENERATED_DIR}/wayland-webos-protocols.cpp"
                       COMMAND "${WAYLANDPP_SCANNER}" ${WEBOS_PROTOCOL_XMLS} "${WAYLAND_EXTRA_PROTOCOL_GENERATED_DIR}/wayland-webos-protocols.hpp" "${WAYLAND_EXTRA_PROTOCOL_GENERATED_DIR}/wayland-webos-protocols.cpp"
                       DEPENDS "${WAYLANDPP_SCANNER}" ${WEBOS_PROTOCOL_XMLS}
