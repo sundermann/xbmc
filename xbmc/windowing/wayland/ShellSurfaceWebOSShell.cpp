@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2018 Team Kodi
+ *  Copyright (C) 2017-2023 Team Kodi
  *  This file is part of Kodi - https://kodi.tv
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
@@ -8,6 +8,8 @@
 
 #include "ShellSurfaceWebOSShell.h"
 
+#include "CompileInfo.h"
+#include "platform/Environment.h"
 #include "Registry.h"
 #include "utils/log.h"
 
@@ -16,11 +18,14 @@ using namespace std::placeholders;
 
 using namespace wayland;
 
+namespace
+{
 /*
   WebOS always is 1920x1080
 */
-#define WEBOS_UI_WIDTH 1920
-#define WEBOS_UI_HEIGHT 1080
+constexpr int WEBOS_UI_WIDTH = 1920;
+constexpr int WEBOS_UI_HEIGHT = 1080;
+}
 
 CShellSurfaceWebOSShell::CShellSurfaceWebOSShell(IShellSurfaceHandler& handler,
                                                  CConnection& connection,
@@ -58,15 +63,13 @@ CShellSurfaceWebOSShell::CShellSurfaceWebOSShell(IShellSurfaceHandler& handler,
     m_handler.OnClose();
   };
 
-  const char *appId = NULL, *displayId = NULL;
-
-  if ((appId = getenv("APP_ID")) == NULL)
-  {
-    appId = "org.xbmc.kodi";
+  std::string appId = CEnvironment::getenv("APP_ID");
+  if (appId.empty()) {
+    appId = CCompileInfo::GetPackage();
   }
 
-  if ((displayId = getenv("DISPLAY_ID")) == NULL)
-  {
+  std::string displayId = CEnvironment::getenv("DISPLAY_ID");
+  if (displayId.empty()) {
     displayId = "0";
   }
 
