@@ -36,9 +36,18 @@ if(CORE_SYSTEM_NAME STREQUAL android)
   list(APPEND HEADERS DVDVideoCodecAndroidMediaCodec.h)
 endif()
 
+if(TARGET_WEBOS)
+  list(APPEND SOURCES DVDVideoCodecNDL.cpp)
+  list(APPEND HEADERS DVDVideoCodecNDL.h)
+endif()
+
 if("gbm" IN_LIST CORE_PLATFORM_NAME_LC OR "wayland" IN_LIST CORE_PLATFORM_NAME_LC)
   list(APPEND SOURCES DVDVideoCodecDRMPRIME.cpp)
   list(APPEND HEADERS DVDVideoCodecDRMPRIME.h)
 endif()
 
 core_add_library(dvdvideocodecs)
+
+if(TARGET_WEBOS)
+  target_link_libraries(dvdvideocodecs NDL_directmedia::NDL_directmedia)
+endif()

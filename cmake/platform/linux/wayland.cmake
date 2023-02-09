@@ -10,6 +10,7 @@ endif()
 set(PLATFORM_GLOBAL_TARGET_DEPS generate-wayland-extra-protocols)
 if(TARGET_WEBOS)
   list(APPEND PLATFORM_GLOBAL_TARGET_DEPS generate-wayland-webos-protocols)
+  list(APPEND PLATFORM_OPTIONAL_DEPS NDL_directmedia)
 endif()
 set(WAYLAND_EXTRA_PROTOCOL_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 

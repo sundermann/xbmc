@@ -55,6 +55,7 @@
 
 #ifdef TARGET_WEBOS
 #include "ShellSurfaceWebOSShell.h"
+#include "DVDCodecs/Video/DVDVideoCodecNDL.h"
 #endif
 
 using namespace KODI::WINDOWING;
@@ -164,6 +165,9 @@ bool CWinSystemWayland::InitWindowSystem()
 
   VIDEOPLAYER::CProcessInfoWayland::Register();
   RETRO::CRPProcessInfoWayland::Register();
+#ifdef TARGET_WEBOS
+  CDVDVideoCodecNDL::Register();
+#endif
 
   CLog::LogF(LOGINFO, "Connecting to Wayland server");
   m_connection.reset(new CConnection);
