@@ -20,7 +20,7 @@
 
 #if (defined(__arm__) && defined(HAS_NEON)) || defined(__aarch64__)
 #include <asm/hwcap.h>
-#include <sys/auxv.h>
+//#include <sys/auxv.h>
 #elif defined(__i386__) || defined(__x86_64__)
 #include <cpuid.h>
 #endif
@@ -252,6 +252,7 @@ CCPUInfoLinux::CCPUInfoLinux()
   }
 #endif
 
+#if 0
 #if defined(HAS_NEON) && defined(__arm__)
   if (getauxval(AT_HWCAP) & HWCAP_NEON)
     m_cpuFeatures |= CPU_FEATURE_NEON;
@@ -261,6 +262,8 @@ CCPUInfoLinux::CCPUInfoLinux()
   if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
     m_cpuFeatures |= CPU_FEATURE_NEON;
 #endif
+#endif
+  m_cpuFeatures |= CPU_FEATURE_NEON;
 
   // Set MMX2 when SSE is present as SSE is a superset of MMX2 and Intel doesn't set the MMX2 cap
   if (m_cpuFeatures & CPU_FEATURE_SSE)

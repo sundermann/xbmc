@@ -71,7 +71,7 @@ bool CWinSystemWaylandEGLContext::CreateNewWindow(const std::string& name,
   // to the resolution that should be used for the initial surface size
   // - the compositor might want something other than the resolution given
   if (!m_eglContext.CreatePlatformSurface(
-          m_nativeWindow.c_ptr(), reinterpret_cast<khronos_uintptr_t>(m_nativeWindow.c_ptr())))
+          m_nativeWindow.c_ptr(), reinterpret_cast<EGLNativeWindowType>(m_nativeWindow.c_ptr())))
   {
     return false;
   }
