@@ -98,8 +98,8 @@ bool CEncoderFFmpeg::Init()
     /* Set the basic encoder parameters.
      * The input file's sample rate is used to avoid a sample rate conversion. */
     const AVSampleFormat* sampleFmts = nullptr;
-    int numFmts = 0;
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 12, 100)
+    int numFmts = 0;
     if (avcodec_get_supported_config(m_codecCtx, codec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0,
                                      reinterpret_cast<const void**>(&sampleFmts), &numFmts) < 0)
     {
@@ -246,7 +246,11 @@ void CEncoderFFmpeg::SetTag(const std::string& tag, const std::string& value)
   av_dict_set(&m_formatCtx->metadata, tag.c_str(), value.c_str(), 0);
 }
 
+#if LIBAVCODEC_VERSION_MAJOR >= 61
 int CEncoderFFmpeg::avio_write_callback(void* opaque, const uint8_t* buf, int buf_size)
+#else
+int CEncoderFFmpeg::avio_write_callback(void* opaque, uint8_t* buf, int buf_size)
+#endif
 {
   CEncoderFFmpeg* enc = static_cast<CEncoderFFmpeg*>(opaque);
   if (enc->Write(buf, buf_size) != buf_size)
