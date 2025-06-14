@@ -5,7 +5,15 @@ DEPS = ../../Makefile.include Makefile PYTHON3-VERSION ../../download-files.incl
 CONFIGURE=./configure --prefix=$(NATIVEPREFIX) \
                       --disable-shared \
                       --disable-framework \
+                      --with-openssl=$(NATIVEPREFIX) \
                       --without-pymalloc
+
+ifeq ($(OS),osx)
+  # PY_UNSUPPORTED_OPENSSL_BUILD uses --exclude-libs which is not available on clang osx
+  export LDFLAGS=$(NATIVE_LDFLAGS) -lz
+else
+  export PY_UNSUPPORTED_OPENSSL_BUILD=static
+endif
 
 ifeq ($(OS),linux)
   CONFIGURE += --with-system-expat
