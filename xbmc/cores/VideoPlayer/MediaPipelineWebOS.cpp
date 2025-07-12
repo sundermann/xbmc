@@ -794,7 +794,15 @@ void CMediaPipelineWebOS::FeedVideoData(const std::shared_ptr<CDVDMsg>& msg)
       std::string payload;
       CJSONVariantWriter::Write(time, payload, true);
       if (!m_mediaAPIs->setTimeToDecode(payload.c_str()))
+      {
         CLog::LogF(LOGERROR, "setTimeToDecode failed");
+        auto player = static_cast<mediapipeline::CustomPlayer*>(m_mediaAPIs->player.get());
+        auto pipeline = static_cast<mediapipeline::CustomPipeline*>(player->getPipeline().get());
+        MEDIA_CUSTOM_CONTENT_INFO_T contentInfo;
+        pipeline->loadSpi_getInfo(&contentInfo);
+        contentInfo.ptsToDecode = pts.count();
+        pipeline->setContentInfo(MEDIA_CUSTOM_SRC_TYPE_ES, &contentInfo);
+      }
 
       auto player = static_cast<mediapipeline::CustomPlayer*>(m_mediaAPIs->player.get());
       auto pipeline = static_cast<mediapipeline::CustomPipeline*>(player->getPipeline().get());
