@@ -1,5 +1,5 @@
 /*
-*  Copyright (C) 2005-2025 Team Kodi
+ *  Copyright (C) 2025 Team Kodi
  *  This file is part of Kodi - https://kodi.tv
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
@@ -9,8 +9,8 @@
 #include "VideoPlayerWebOS.h"
 
 #include "MediaPipelineWebOS.h"
-#include "VideoPlayerAudio.h"
-#include "VideoPlayerVideo.h"
+#include "VideoPlayerAudioWebOS.h"
+#include "VideoPlayerVideoWebOS.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 

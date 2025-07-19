@@ -47,6 +47,8 @@ if("webos" IN_LIST CORE_PLATFORM_NAME_LC)
     list(APPEND SOURCES MediaPipelineWebOS.cpp
                         VideoPlayerWebOS.cpp)
     list(APPEND HEADERS MediaPipelineWebOS.h
+                        VideoPlayerAudioWebOS.h
+                        VideoPlayerVideoWebOS.h
                         VideoPlayerWebOS.h)
 endif()
 

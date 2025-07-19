@@ -1,5 +1,5 @@
 /*
-*  Copyright (C) 2005-2025 Team Kodi
+ *  Copyright (C) 2025 Team Kodi
  *  This file is part of Kodi - https://kodi.tv
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
@@ -37,10 +37,8 @@
 #include <cstdint>
 #include <exception>
 #include <format>
-#include <iomanip>
 #include <map>
 #include <ratio>
-#include <sstream>
 #include <string_view>
 #include <utility>
 #include <vector>
