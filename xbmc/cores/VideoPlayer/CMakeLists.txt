@@ -45,6 +45,8 @@ set(HEADERS AudioSinkAE.h
 
 if("webos" IN_LIST CORE_PLATFORM_NAME_LC)
     list(APPEND SOURCES MediaPipelineWebOS.cpp
+                        VideoPlayerAudioWebOS.cpp
+                        VideoPlayerVideoWebOS.cpp
                         VideoPlayerWebOS.cpp)
     list(APPEND HEADERS MediaPipelineWebOS.h
                         VideoPlayerAudioWebOS.h
