@@ -282,6 +282,11 @@ private:
   bool Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHint);
 
   /**
+  * Unloads the media pipeline for cleanup.
+  */
+  void Unload();
+
+  /**
  * @brief Callback for media events.
  * @param type Event type identifier.
  * @param numValue Numeric associated value.
@@ -339,6 +344,7 @@ private:
   std::atomic<unsigned long> m_droppedFrames{0};
 
   std::mutex m_audioCriticalSection;
+  std::mutex m_videoCriticalSection;
 
   CDVDMessageQueue m_messageQueueAudio;
   CDVDMessageQueue m_messageQueueVideo;

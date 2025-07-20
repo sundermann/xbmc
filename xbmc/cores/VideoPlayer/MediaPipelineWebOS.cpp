@@ -179,8 +179,7 @@ CMediaPipelineWebOS::CMediaPipelineWebOS(CProcessInfo& processInfo,
 
 CMediaPipelineWebOS::~CMediaPipelineWebOS()
 {
-  CloseVideoStream(true);
-  CloseAudioStream(true);
+  Unload();
 }
 
 int CMediaPipelineWebOS::GetVideoBitrate() const
@@ -294,6 +293,16 @@ bool CMediaPipelineWebOS::OpenAudioStream(CDVDStreamInfo& audioHint)
       m_mediaAPIs->changeAudioCodec(codecName, output);
       FlushAudioMessages();
       m_audioHint = audioHint;
+
+      m_processInfo.SetAudioChannels(CAEUtil::GetAEChannelLayout(audioHint.channellayout));
+      m_processInfo.SetAudioSampleRate(audioHint.samplerate);
+      m_processInfo.SetAudioBitsPerSample(audioHint.bitspersample);
+      if (ms_codecMap.contains(audioHint.codec))
+        m_processInfo.SetAudioDecoderName(std::string("starfish-") +
+                                          ms_codecMap.at(audioHint.codec).data());
+      else if (m_audioEncoder)
+        m_processInfo.SetAudioDecoderName("starfish-AC3 (transcoding)");
+
       return true;
     }
     else
@@ -319,13 +328,76 @@ bool CMediaPipelineWebOS::OpenVideoStream(const CDVDStreamInfo& hint)
 
   if (m_loaded)
   {
-    StopThread(true);
-    if (m_audioThread.joinable())
-      m_audioThread.join();
+    if (m_videoHint.codec == hint.codec)
+    {
+      std::scoped_lock lock(m_videoCriticalSection);
+      m_videoHint = hint;
 
-    const CDVDStreamInfo audioHint = m_audioHint;
-    CloseAudioStream(true);
-    CloseVideoStream(true);
+      if (hint.codec == AV_CODEC_ID_AVS || hint.codec == AV_CODEC_ID_CAVS ||
+          hint.codec == AV_CODEC_ID_H264)
+      {
+        // check for h264-avcC and convert to h264-annex-b
+        if (hint.extradata && !hint.cryptoSession)
+        {
+          m_bitstream = std::make_unique<CBitstreamConverter>();
+          if (!m_bitstream->Open(hint.codec, m_videoHint.extradata.GetData(),
+                                 static_cast<int>(m_videoHint.extradata.GetSize()), true))
+          {
+            m_bitstream.reset();
+          }
+        }
+      }
+      else if (hint.codec == AV_CODEC_ID_HEVC)
+      {
+        const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+        bool convertDovi{false};
+        bool removeDovi{false};
+
+        convertDovi = settings->GetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
+
+        const std::shared_ptr allowedHdrFormatsSetting(std::dynamic_pointer_cast<CSettingList>(
+            settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_ALLOWEDHDRFORMATS)));
+        removeDovi = !CSettingUtils::FindIntInList(
+            allowedHdrFormatsSetting, CSettings::VIDEOPLAYER_ALLOWED_HDR_TYPE_DOLBY_VISION);
+
+        // check for hevc-hvcC and convert to h265-annex-b
+        if (hint.extradata && !hint.cryptoSession)
+        {
+          m_bitstream = std::make_unique<CBitstreamConverter>();
+          if (!m_bitstream->Open(hint.codec, m_videoHint.extradata.GetData(),
+                                 static_cast<int>(hint.extradata.GetSize()), true))
+          {
+            m_bitstream.reset();
+          }
+
+          if (m_bitstream)
+          {
+            m_bitstream->SetRemoveDovi(removeDovi);
+
+            // webOS doesn't support HDR10+ and it can cause issues
+            m_bitstream->SetRemoveHdr10Plus(true);
+
+            // Only set for profile 7, container hint allows to skip parsing unnecessarily
+            // set profile 8 and single layer when converting
+            if (!removeDovi && convertDovi && hint.dovi.dv_profile == 7)
+            {
+              m_bitstream->SetConvertDovi(true);
+            }
+          }
+        }
+      }
+      Flush(true);
+
+      m_processInfo.SetVideoDimensions(hint.width, hint.height);
+      m_processInfo.SetVideoDAR(static_cast<float>(hint.aspect));
+      m_processInfo.SetVideoFps(static_cast<float>(hint.fpsrate) /
+                                static_cast<float>(hint.fpsscale));
+
+      return true;
+    }
+
+    // Different codec => unload the current stream
+    Unload();
 
     // wait until m_loaded is false
     std::unique_lock lock(m_eventMutex);
@@ -335,7 +407,6 @@ bool CMediaPipelineWebOS::OpenVideoStream(const CDVDStreamInfo& hint)
       return false;
     }
 
-    m_audioHint = audioHint;
     m_mediaAPIs = std::make_unique<StarfishMediaAPIs>();
   }
 
@@ -348,22 +419,10 @@ bool CMediaPipelineWebOS::OpenVideoStream(const CDVDStreamInfo& hint)
 
 void CMediaPipelineWebOS::CloseAudioStream(bool waitForBuffers)
 {
-  m_audioHint = CDVDStreamInfo{};
 }
 
 void CMediaPipelineWebOS::CloseVideoStream(bool waitForBuffers)
 {
-  Flush(false);
-  m_mediaAPIs->Unload();
-  m_videoHint = CDVDStreamInfo{};
-
-  const auto buffer = static_cast<CStarfishVideoBuffer*>(m_picture.videoBuffer);
-  if (buffer->m_acbId)
-  {
-    AcbAPI_finalize(buffer->m_acbId);
-    AcbAPI_destroy(buffer->m_acbId);
-    buffer->m_acbId = 0;
-  }
 }
 
 void CMediaPipelineWebOS::Flush(bool sync)
@@ -483,6 +542,8 @@ void CMediaPipelineWebOS::SetSubtitleDelay(const double delay)
 
 bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHint)
 {
+  std::scoped_lock videoLock(m_videoCriticalSection);
+
   CVariant p;
   CVariant payloadArgs;
 
@@ -695,6 +756,16 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   bufferingCtrInfo["srcBufferLevelAudio"]["minimum"] = MIN_SRC_BUFFER_LEVEL_AUDIO;
   bufferingCtrInfo["srcBufferLevelAudio"]["maximum"] = MAX_SRC_BUFFER_LEVEL_AUDIO;
 
+  int32_t maxWidth = 0;
+  int32_t maxHeight = 0;
+  int32_t maxFramerate = 0;
+  smp::util::getMaxVideoResolution(ms_codecMap.at(videoHint.codec).data(), &maxWidth, &maxHeight,
+                                   &maxFramerate);
+  p["option"]["adaptiveStreaming"]["adaptiveResolution"] = true;
+  p["option"]["adaptiveStreaming"]["maxWidth"] = maxWidth;
+  p["option"]["adaptiveStreaming"]["maxHeight"] = maxHeight;
+  p["option"]["adaptiveStreaming"]["maxFrameRate"] = maxFramerate;
+
   if (audioHint.codec == AV_CODEC_ID_EAC3)
   {
     CVariant& ac3PlusInfo = contents["ac3PlusInfo"];
@@ -777,6 +848,26 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
 
   m_renderManager.ShowVideo(true);
   return true;
+}
+
+void CMediaPipelineWebOS::Unload()
+{
+  CThread::StopThread(true);
+  if (m_audioThread.joinable())
+    m_audioThread.join();
+
+  const CDVDStreamInfo audioHint = m_audioHint;
+
+  Flush(false);
+  m_mediaAPIs->Unload();
+
+  const auto buffer = static_cast<CStarfishVideoBuffer*>(m_picture.videoBuffer);
+  if (buffer->m_acbId)
+  {
+    AcbAPI_finalize(buffer->m_acbId);
+    AcbAPI_destroy(buffer->m_acbId);
+    buffer->m_acbId = 0;
+  }
 }
 
 void CMediaPipelineWebOS::SetHDR(const CDVDStreamInfo& hint) const
@@ -1000,7 +1091,7 @@ void CMediaPipelineWebOS::ProcessOverlays(const double pts) const
   m_overlayContainer.CleanUp(pts - m_subtitleDelay);
 
   std::vector<std::shared_ptr<CDVDOverlay>> overlays;
-  std::unique_lock<CCriticalSection> lock(m_overlayContainer);
+  std::scoped_lock<CCriticalSection> lock(m_overlayContainer);
 
   //Check all overlays and render those that should be rendered, based on time and forced
   //Both forced and subs should check timing
@@ -1041,6 +1132,7 @@ void CMediaPipelineWebOS::Process()
     {
       if (msg->IsType(CDVDMsg::DEMUXER_PACKET))
       {
+        std::scoped_lock videoLock(m_videoCriticalSection);
         FeedVideoData(msg);
       }
       else if (msg->IsType(CDVDMsg::PLAYER_REQUEST_STATE))
@@ -1070,7 +1162,7 @@ void CMediaPipelineWebOS::ProcessAudio()
     {
       if (msg->IsType(CDVDMsg::DEMUXER_PACKET))
       {
-        std::unique_lock lock(m_audioCriticalSection);
+        std::scoped_lock lock(m_audioCriticalSection);
         const DemuxPacket* packet =
             std::static_pointer_cast<CDVDMsgDemuxerPacket>(msg)->GetPacket();
         if (m_audioCodec && packet->iStreamId != RESAMPLED_STREAM_ID)
