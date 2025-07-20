@@ -388,6 +388,7 @@ bool CMediaPipelineWebOS::OpenVideoStream(const CDVDStreamInfo& hint)
       }
       Flush(true);
 
+      m_processInfo.SetVideoInterlaced(hint.interlaced);
       m_processInfo.SetVideoDimensions(hint.width, hint.height);
       m_processInfo.SetVideoDAR(static_cast<float>(hint.aspect));
       m_processInfo.SetVideoFps(static_cast<float>(hint.fpsrate) /
@@ -831,6 +832,7 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   m_processInfo.SetVideoDecoderName(formatName, true);
   m_processInfo.SetVideoPixelFormat("Surface");
   m_processInfo.SetVideoDimensions(videoHint.width, videoHint.height);
+  m_processInfo.SetVideoInterlaced(videoHint.interlaced);
   m_processInfo.SetVideoDeintMethod("hardware");
   m_processInfo.SetVideoDAR(static_cast<float>(videoHint.aspect));
   m_processInfo.SetVideoFps(static_cast<float>(fps));
