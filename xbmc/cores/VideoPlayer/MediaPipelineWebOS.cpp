@@ -60,6 +60,7 @@ namespace
 {
 constexpr unsigned int AC3_MAX_SYNC_FRAME_SIZE = 3840;
 constexpr int RESAMPLED_STREAM_ID = -1000;
+constexpr unsigned int MIN_AUDIO_RESAMPLE_BUFFER_SIZE = 4096;
 
 constexpr unsigned int PRE_BUFFER_BYTES = 0;
 constexpr unsigned int MAX_QUEUE_BUFFER_LEVEL = 1 * 1024 * 1024; // 1 MB
@@ -1102,7 +1103,7 @@ void CMediaPipelineWebOS::ProcessAudio()
               m_audioResample->FillBuffer();
 
               AEAudioFormat input = m_audioCodec->GetFormat();
-              input.m_frames = frame.nb_frames;
+              input.m_frames = std::max(frame.nb_frames, MIN_AUDIO_RESAMPLE_BUFFER_SIZE);
               m_encoderBuffers = std::make_unique<ActiveAE::CActiveAEBufferPool>(input);
               m_encoderBuffers->Create(0);
             }
