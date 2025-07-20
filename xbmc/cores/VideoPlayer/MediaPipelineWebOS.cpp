@@ -838,7 +838,10 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   m_processInfo.SetVideoFps(static_cast<float>(fps));
   if (audioHint.codec != AV_CODEC_ID_NONE)
   {
-    m_processInfo.SetAudioChannels(CAEUtil::GetAEChannelLayout(audioHint.channellayout));
+    if (audioHint.channellayout)
+      m_processInfo.SetAudioChannels(CAEUtil::GetAEChannelLayout(audioHint.channellayout));
+    else
+      m_processInfo.SetAudioChannels(CAEUtil::GuessChLayout(audioHint.channels));
     m_processInfo.SetAudioSampleRate(audioHint.samplerate);
     m_processInfo.SetAudioBitsPerSample(audioHint.bitspersample);
     if (ms_codecMap.contains(audioHint.codec))
@@ -1200,6 +1203,11 @@ void CMediaPipelineWebOS::ProcessAudio()
               input.m_frames = std::max(frame.nb_frames, MIN_AUDIO_RESAMPLE_BUFFER_SIZE);
               m_encoderBuffers = std::make_unique<ActiveAE::CActiveAEBufferPool>(input);
               m_encoderBuffers->Create(0);
+
+              // Update process info with audio details
+              m_processInfo.SetAudioChannels(frame.format.m_channelLayout);
+              m_processInfo.SetAudioSampleRate(frame.format.m_sampleRate);
+              m_processInfo.SetAudioBitsPerSample(frame.bits_per_sample);
             }
             ActiveAE::CSampleBuffer* buffer = m_encoderBuffers->GetFreeBuffer();
             buffer->timestamp = static_cast<int64_t>(frame.pts);
