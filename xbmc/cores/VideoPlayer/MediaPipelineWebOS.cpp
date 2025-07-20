@@ -36,7 +36,6 @@
 #include <cmath>
 #include <cstdint>
 #include <exception>
-#include <format>
 #include <map>
 #include <ratio>
 #include <string_view>
@@ -193,7 +192,7 @@ void CMediaPipelineWebOS::UpdateAudioInfo()
   double ts = m_messageQueueAudio.GetTimeSize();
   double kbps = m_audioStats.GetBitrate() / 1024.0;
 
-  m_audioInfo = std::format("aq:{:02}% {:.3f}s, Kb/s:{:.2f}{}", level, ts, kbps,
+  m_audioInfo = fmt::format("aq:{:02}% {:.3f}s, Kb/s:{:.2f}{}", level, ts, kbps,
                             m_audioEncoder ? ", transcoded ac3" : "");
 }
 
@@ -204,7 +203,7 @@ void CMediaPipelineWebOS::UpdateVideoInfo()
   double mbps = static_cast<double>(GetVideoBitrate()) / (1024.0 * 1024.0);
   double fps = static_cast<double>(m_videoHint.fpsrate) / static_cast<double>(m_videoHint.fpsscale);
 
-  m_videoInfo = std::format("vq:{:02}% {:.3f}s, Mb/s:{:.2f}, fr:{:.3f}, drop:{}", level, ts, mbps,
+  m_videoInfo = fmt::format("vq:{:02}% {:.3f}s, Mb/s:{:.2f}, fr:{:.3f}, drop:{}", level, ts, mbps,
                             fps, m_droppedFrames.load());
 }
 
@@ -959,7 +958,7 @@ void CMediaPipelineWebOS::FeedAudioData(const std::shared_ptr<CDVDMsg>& msg)
       std::chrono::duration<double, std::ratio<1, DVD_TIME_BASE>>(packet->pts));
 
   CVariant payload;
-  payload["bufferAddr"] = std::format("{:#x}", reinterpret_cast<std::uintptr_t>(packet->pData));
+  payload["bufferAddr"] = fmt::format("{:#x}", reinterpret_cast<std::uintptr_t>(packet->pData));
   payload["bufferSize"] = packet->iSize;
   payload["pts"] = pts.count();
   payload["esData"] = 2;
@@ -1059,7 +1058,7 @@ void CMediaPipelineWebOS::FeedVideoData(const std::shared_ptr<CDVDMsg>& msg)
   if (data && size)
   {
     CVariant payload;
-    payload["bufferAddr"] = std::format("{:#x}", reinterpret_cast<std::uintptr_t>(data));
+    payload["bufferAddr"] = fmt::format("{:#x}", reinterpret_cast<std::uintptr_t>(data));
     payload["bufferSize"] = size;
     payload["pts"] = (pts - std::chrono::milliseconds(m_renderManager.GetDelay())).count();
     payload["esData"] = 1;
