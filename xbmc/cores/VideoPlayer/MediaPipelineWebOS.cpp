@@ -62,7 +62,7 @@ constexpr int RESAMPLED_STREAM_ID = -1000;
 constexpr unsigned int MIN_AUDIO_RESAMPLE_BUFFER_SIZE = 4096;
 
 constexpr unsigned int PRE_BUFFER_BYTES = 0;
-constexpr unsigned int MAX_QUEUE_BUFFER_LEVEL = 1 * 1024 * 1024; // 1 MB
+constexpr unsigned int MAX_QUEUE_BUFFER_LEVEL = 0; // no additional queue
 constexpr unsigned int MIN_BUFFER_LEVEL = 90;
 constexpr unsigned int MAX_BUFFER_LEVEL = 100;
 constexpr unsigned int MIN_SRC_BUFFER_LEVEL_AUDIO = 1 * 1024 * 1024; // 1 MB
@@ -147,6 +147,8 @@ CMediaPipelineWebOS::CMediaPipelineWebOS(CProcessInfo& processInfo,
   m_messageQueueVideo.Init();
   m_messageQueueAudio.SetMaxTimeSize(1.0);
   m_messageQueueVideo.SetMaxTimeSize(1.0);
+  m_messageQueueAudio.SetMaxDataSize(MAX_SRC_BUFFER_LEVEL_AUDIO);
+  m_messageQueueVideo.SetMaxDataSize(MAX_SRC_BUFFER_LEVEL_VIDEO);
 
   m_picture.Reset();
   m_picture.videoBuffer = new CStarfishVideoBuffer();
@@ -174,6 +176,8 @@ CMediaPipelineWebOS::CMediaPipelineWebOS(CProcessInfo& processInfo,
   {
     CLog::LogF(LOGERROR, "Luna request call failed");
   }
+
+  m_processInfo.GetVideoBufferManager().ReleasePools();
 }
 
 CMediaPipelineWebOS::~CMediaPipelineWebOS()
@@ -189,10 +193,11 @@ int CMediaPipelineWebOS::GetVideoBitrate() const
 void CMediaPipelineWebOS::UpdateAudioInfo()
 {
   int level = std::min(99, m_messageQueueAudio.GetLevel());
+  double kb = m_messageQueueAudio.GetDataSize() / 1024.0;
   double ts = m_messageQueueAudio.GetTimeSize();
   double kbps = m_audioStats.GetBitrate() / 1024.0;
 
-  m_audioInfo = fmt::format("aq:{:02}% {:.3f}s, Kb/s:{:.2f}{}", level, ts, kbps,
+  m_audioInfo = fmt::format("aq:{:02}% {:.3f}s {:.3f}Kb, Kb/s:{:.2f}{}", level, ts, kb, kbps,
                             m_audioEncoder ? ", transcoded ac3" : "");
 }
 
@@ -200,11 +205,12 @@ void CMediaPipelineWebOS::UpdateVideoInfo()
 {
   int level = std::min(99, m_processInfo.GetLevelVQ());
   double ts = m_messageQueueVideo.GetTimeSize();
+  double mb = m_messageQueueVideo.GetDataSize() / 1024.0 / 1024.0;
   double mbps = static_cast<double>(GetVideoBitrate()) / (1024.0 * 1024.0);
   double fps = static_cast<double>(m_videoHint.fpsrate) / static_cast<double>(m_videoHint.fpsscale);
 
-  m_videoInfo = fmt::format("vq:{:02}% {:.3f}s, Mb/s:{:.2f}, fr:{:.3f}, drop:{}", level, ts, mbps,
-                            fps, m_droppedFrames.load());
+  m_videoInfo = fmt::format("vq:{:02}% {:.3f}s, {:.3f}Mb, Mb/s:{:.2f}, fr:{:.3f}, drop:{}", level,
+                            ts, mb, mbps, fps, m_droppedFrames.load());
 }
 
 std::string CMediaPipelineWebOS::GetAudioInfo() const
@@ -438,12 +444,12 @@ void CMediaPipelineWebOS::Flush(bool sync)
 
 bool CMediaPipelineWebOS::AcceptsAudioData() const
 {
-  return m_bufferLevel == 0 || !m_audioFull || !m_messageQueueAudio.IsFull();
+  return !m_messageQueueAudio.IsFull();
 }
 
 bool CMediaPipelineWebOS::AcceptsVideoData() const
 {
-  return m_bufferLevel == 0 || !m_videoFull || !m_messageQueueVideo.IsFull();
+  return !m_messageQueueVideo.IsFull();
 }
 
 bool CMediaPipelineWebOS::HasAudioData() const
