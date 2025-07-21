@@ -248,6 +248,8 @@ void CMediaPipelineWebOS::FlushAudioMessages()
 
 bool CMediaPipelineWebOS::OpenAudioStream(CDVDStreamInfo& audioHint)
 {
+  m_audioHint = audioHint;
+
   if (m_loaded)
   {
     if (m_webOSVersion >= 6)
@@ -257,6 +259,7 @@ bool CMediaPipelineWebOS::OpenAudioStream(CDVDStreamInfo& audioHint)
       m_audioCodec = nullptr;
       m_audioEncoder = nullptr;
       m_audioResample = nullptr;
+      m_encoderBuffers = nullptr;
       if (!ms_codecMap.contains(audioHint.codec))
       {
         m_audioCodec = std::make_unique<CDVDAudioCodecFFmpeg>(m_processInfo);
@@ -297,7 +300,6 @@ bool CMediaPipelineWebOS::OpenAudioStream(CDVDStreamInfo& audioHint)
       CLog::LogF(LOGDEBUG, "changeAudioCodec: {}", output);
       m_mediaAPIs->changeAudioCodec(codecName, output);
       FlushAudioMessages();
-      m_audioHint = audioHint;
 
       m_processInfo.SetAudioChannels(CAEUtil::GetAEChannelLayout(audioHint.channellayout));
       m_processInfo.SetAudioSampleRate(audioHint.samplerate);
@@ -310,13 +312,19 @@ bool CMediaPipelineWebOS::OpenAudioStream(CDVDStreamInfo& audioHint)
 
       return true;
     }
-    else
-    {
-      m_messageQueueParent.Put(std::make_shared<CDVDMsg>(CDVDMsg::PLAYER_ABORT));
-    }
-  }
+    // API introduced in webOS 6.0, so we need to handle older versions differently
+    Unload();
 
-  m_audioHint = audioHint;
+    // wait until m_loaded is false
+    std::unique_lock lock(m_eventMutex);
+    if (!m_eventCondition.wait_for(lock, 1s, [this] { return !m_loaded; }))
+    {
+      CLog::LogF(LOGERROR, "Timeout waiting for m_loaded to be false");
+      return false;
+    }
+
+    m_mediaAPIs = std::make_unique<StarfishMediaAPIs>();
+  }
 
   if (m_audioHint.codec && m_videoHint.codec)
     return Load(m_videoHint, m_audioHint);
@@ -549,6 +557,7 @@ void CMediaPipelineWebOS::SetSubtitleDelay(const double delay)
 bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHint)
 {
   std::scoped_lock videoLock(m_videoCriticalSection);
+  std::scoped_lock audioLock(m_audioCriticalSection);
 
   CVariant p;
   CVariant payloadArgs;
@@ -716,11 +725,14 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   p["option"]["appId"] = CCompileInfo::GetPackage();
   contents["codec"]["video"] = ms_codecMap.at(videoHint.codec).data();
 
+  m_audioCodec = nullptr;
+  m_audioEncoder = nullptr;
+  m_audioResample = nullptr;
+  m_encoderBuffers = nullptr;
   if (audioHint.codec == AV_CODEC_ID_NONE)
     p["option"]["needAudio"] = false;
   else if (!ms_codecMap.contains(audioHint.codec))
   {
-    std::scoped_lock lock(m_audioCriticalSection);
     m_audioCodec = std::make_unique<CDVDAudioCodecFFmpeg>(m_processInfo);
     CDVDCodecOptions options;
     m_audioCodec->Open(audioHint, options);
@@ -745,7 +757,7 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   CVariant& esInfo = contents["esInfo"];
   esInfo["pauseAtDecodeTime"] = true;
   esInfo["seperatedPTS"] = true;
-  esInfo["ptsToDecode"] = 0;
+  esInfo["ptsToDecode"] = m_pts.load().count();
   esInfo["videoWidth"] = videoHint.width;
   esInfo["videoHeight"] = videoHint.height;
   esInfo["videoFpsValue"] = videoHint.fpsrate;
@@ -866,9 +878,6 @@ void CMediaPipelineWebOS::Unload()
   if (m_audioThread.joinable())
     m_audioThread.join();
 
-  const CDVDStreamInfo audioHint = m_audioHint;
-
-  Flush(false);
   m_mediaAPIs->Unload();
 
   const auto buffer = static_cast<CStarfishVideoBuffer*>(m_picture.videoBuffer);
@@ -1134,6 +1143,7 @@ void CMediaPipelineWebOS::Process()
 {
   while (!m_bStop)
   {
+    std::scoped_lock videoLock(m_videoCriticalSection);
     std::shared_ptr<CDVDMsg> msg = nullptr;
     int priority = 0;
     m_messageQueueVideo.Get(msg, 10ms, priority);
@@ -1142,7 +1152,6 @@ void CMediaPipelineWebOS::Process()
     {
       if (msg->IsType(CDVDMsg::DEMUXER_PACKET))
       {
-        std::scoped_lock videoLock(m_videoCriticalSection);
         FeedVideoData(msg);
       }
       else if (msg->IsType(CDVDMsg::PLAYER_REQUEST_STATE))
@@ -1165,6 +1174,7 @@ void CMediaPipelineWebOS::ProcessAudio()
   m_audioStats.Start();
   while (!m_bStop)
   {
+    std::scoped_lock lock(m_audioCriticalSection);
     std::shared_ptr<CDVDMsg> msg = nullptr;
     int priority = 0;
     m_messageQueueAudio.Get(msg, 10ms, priority);
@@ -1172,7 +1182,6 @@ void CMediaPipelineWebOS::ProcessAudio()
     {
       if (msg->IsType(CDVDMsg::DEMUXER_PACKET))
       {
-        std::scoped_lock lock(m_audioCriticalSection);
         const DemuxPacket* packet =
             std::static_pointer_cast<CDVDMsgDemuxerPacket>(msg)->GetPacket();
         if (m_audioCodec && packet->iStreamId != RESAMPLED_STREAM_ID)
