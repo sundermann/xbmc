@@ -47,6 +47,11 @@ void CVideoPlayerWebOS::CreatePlayers()
         *m_processInfo, m_renderManager, m_clock, m_messenger, m_overlayContainer, hasAudio);
     m_VideoPlayerVideo = new CVideoPlayerVideoWebOS(*m_mediaPipelineWebOS, *m_processInfo);
     m_VideoPlayerAudio = new CVideoPlayerAudioWebOS(*m_mediaPipelineWebOS, *m_processInfo);
+
+    const CVideoSettings settings = m_processInfo->GetVideoSettings();
+    m_VideoPlayerVideo->EnableSubtitle(settings.m_SubtitleOn);
+    m_VideoPlayerVideo->SetSubtitleDelay(
+        static_cast<int>(-settings.m_SubtitleDelay * DVD_TIME_BASE));
   }
   else if (m_mediaPipelineWebOS || (!m_VideoPlayerVideo && !m_VideoPlayerAudio))
   {
