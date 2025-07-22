@@ -1302,7 +1302,7 @@ void CMediaPipelineWebOS::ProcessAudio()
       }
       else
       {
-        CLog::LogF(LOGINFO, "Received audio message: {}", msg->GetMessageType());
+        CLog::LogF(LOGDEBUG, "Received audio message: {}", msg->GetMessageType());
       }
     }
   }
