@@ -1177,9 +1177,14 @@ void CMediaPipelineWebOS::Process()
         m_messageQueueParent.Put(
             std::make_shared<CDVDMsgType<SStateMsg>>(CDVDMsg::PLAYER_REPORT_STATE, stateMsg));
       }
+      else if (msg->IsType(CDVDMsg::VIDEO_DRAIN))
+      {
+        CLog::LogF(LOGDEBUG, "Received video message: {}", msg->GetMessageType());
+        m_mediaAPIs->pushEOS();
+      }
       else
       {
-        CLog::LogF(LOGINFO, "Received video message: {}", msg->GetMessageType());
+        CLog::LogF(LOGDEBUG, "Received video message: {}", msg->GetMessageType());
       }
     }
   }
@@ -1368,6 +1373,9 @@ void CMediaPipelineWebOS::PlayerCallback(int32_t type, const int64_t numValue, c
       UpdateGUISounds(true);
       break;
     }
+    case PF_EVENT_TYPE_STR_STATE_UPDATE__ENDOFSTREAM:
+      m_bufferLevel = 0;
+      break;
     case PF_EVENT_TYPE_STR_BUFFERFULL:
     {
       SStateMsg msg{.syncState = IDVDStreamPlayer::SYNC_INSYNC, .player = VideoPlayer_AUDIO};
