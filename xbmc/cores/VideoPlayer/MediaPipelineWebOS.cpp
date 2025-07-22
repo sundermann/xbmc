@@ -20,6 +20,7 @@
 #include "VideoRenderers/RenderManager.h"
 #include "cores/AudioEngine/Encoders/AEEncoderFFmpeg.h"
 #include "cores/AudioEngine/Engines/ActiveAE/ActiveAEBuffer.h"
+#include "cores/AudioEngine/Interfaces/AE.h"
 #include "cores/AudioEngine/Utils/AEUtil.h"
 #include "settings/SettingUtils.h"
 #include "settings/Settings.h"
@@ -211,6 +212,21 @@ void CMediaPipelineWebOS::UpdateVideoInfo()
 
   m_videoInfo = fmt::format("vq:{:02}% {:.3f}s, {:.3f}Mb, Mb/s:{:.2f}, fr:{:.3f}, drop:{}", level,
                             ts, mb, mbps, fps, m_droppedFrames.load());
+}
+
+void CMediaPipelineWebOS::UpdateGUISounds(const bool playing)
+{
+  IAE* activeAE = CServiceBroker::GetActiveAE();
+  const int guiSoundMode = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+      CSettings::SETTING_AUDIOOUTPUT_GUISOUNDMODE);
+
+  if (guiSoundMode != AE_SOUND_IDLE)
+    return;
+
+  if (playing)
+    activeAE->SetVolume(0.0);
+  else
+    activeAE->SetVolume(1.0);
 }
 
 std::string CMediaPipelineWebOS::GetAudioInfo() const
@@ -1329,10 +1345,12 @@ void CMediaPipelineWebOS::PlayerCallback(int32_t type, const int64_t numValue, c
       if (m_audioThread.joinable())
         m_audioThread.join();
       m_loaded = false;
+      UpdateGUISounds(false);
       break;
     case PF_EVENT_TYPE_STR_STATE_UPDATE__PAUSED:
       if (buffer->m_acbId)
         AcbAPI_setState(buffer->m_acbId, APPSTATE_FOREGROUND, PLAYSTATE_PAUSED, &buffer->m_taskId);
+      UpdateGUISounds(false);
       break;
     case PF_EVENT_TYPE_STR_STATE_UPDATE__PLAYING:
     {
@@ -1347,6 +1365,7 @@ void CMediaPipelineWebOS::PlayerCallback(int32_t type, const int64_t numValue, c
           std::make_shared<CDVDMsgType<SStartMsg>>(CDVDMsg::PLAYER_STARTED, msg));
       if (buffer->m_acbId)
         AcbAPI_setState(buffer->m_acbId, APPSTATE_FOREGROUND, PLAYSTATE_PLAYING, &buffer->m_taskId);
+      UpdateGUISounds(true);
       break;
     }
     case PF_EVENT_TYPE_STR_BUFFERFULL:
