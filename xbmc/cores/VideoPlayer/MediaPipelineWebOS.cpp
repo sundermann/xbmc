@@ -1244,6 +1244,18 @@ void CMediaPipelineWebOS::ProcessAudio()
               m_processInfo.SetAudioSampleRate(frame.format.m_sampleRate);
               m_processInfo.SetAudioBitsPerSample(frame.bits_per_sample);
             }
+
+            if (frame.pts == DVD_NOPTS_VALUE)
+            {
+              frame.pts = m_audioClock.count();
+              // guess next pts
+              m_audioClock += std::chrono::duration<double, std::milli>(frame.duration);
+            }
+            else
+            {
+              m_audioClock = std::chrono::duration<double, std::milli>(frame.pts);
+            }
+
             ActiveAE::CSampleBuffer* buffer = m_encoderBuffers->GetFreeBuffer();
             buffer->timestamp = static_cast<int64_t>(frame.pts);
             buffer->pkt->nb_samples = static_cast<int>(frame.nb_frames);
