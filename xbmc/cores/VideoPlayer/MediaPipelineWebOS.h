@@ -282,9 +282,19 @@ private:
   bool Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHint);
 
   /**
-  * Unloads the media pipeline for cleanup.
-  */
+ * @brief Unloads the media pipeline for cleanup.
+ */
   void Unload();
+
+   /**
+ * @brief Updates the player video debug info.
+ */
+  void UpdateVideoInfo();
+
+ /**
+ * @brief Updates the player video debug info.
+ */
+  void UpdateAudioInfo();
 
   /**
  * @brief Callback for media events.
@@ -314,9 +324,6 @@ private:
  */
   static void AcbCallback(
       long acbId, long taskId, long eventType, long appState, long playState, const char* reply);
-
-  void UpdateVideoInfo();
-  void UpdateAudioInfo();
 
   std::condition_variable m_eventCondition;
   std::mutex m_eventMutex;
