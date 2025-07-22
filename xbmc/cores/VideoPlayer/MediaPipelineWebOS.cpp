@@ -1105,6 +1105,7 @@ void CMediaPipelineWebOS::FeedVideoData(const std::shared_ptr<CDVDMsg>& msg)
       m_videoStats.AddSampleBytes(packet->iSize);
       UpdateVideoInfo();
       m_videoFull = false;
+      m_processInfo.SetLevelVQ(m_messageQueueVideo.GetLevel());
       return;
     }
 
