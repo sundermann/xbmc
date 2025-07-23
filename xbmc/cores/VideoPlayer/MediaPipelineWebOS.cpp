@@ -1004,13 +1004,11 @@ void CMediaPipelineWebOS::FeedAudioData(const std::shared_ptr<CDVDMsg>& msg)
   {
     m_audioStats.AddSampleBytes(packet->iSize);
     UpdateAudioInfo();
-    m_audioFull = false;
     return;
   }
 
   if (result.find("BufferFull") != std::string::npos)
   {
-    m_audioFull = true;
     m_messageQueueAudio.PutBack(msg);
     std::this_thread::sleep_for(100ms);
     return;
@@ -1104,14 +1102,12 @@ void CMediaPipelineWebOS::FeedVideoData(const std::shared_ptr<CDVDMsg>& msg)
     {
       m_videoStats.AddSampleBytes(packet->iSize);
       UpdateVideoInfo();
-      m_videoFull = false;
       m_processInfo.SetLevelVQ(m_messageQueueVideo.GetLevel());
       return;
     }
 
     if (result.find("BufferFull") != std::string::npos)
     {
-      m_videoFull = true;
       m_messageQueueVideo.PutBack(msg);
       std::this_thread::sleep_for(100ms);
       return;
