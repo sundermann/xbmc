@@ -286,7 +286,15 @@ private:
  */
   void Unload();
 
-   /**
+  /**
+  * @brief Sets up audio stream parameters and transcoding if necessary.
+  * @param audioHint Audio hints from demuxer
+  * @param optInfo CVariant to describe audio format in
+  * @return starfish codec name
+  */
+  std::string SetupAudio(CDVDStreamInfo& audioHint, CVariant& optInfo);
+
+  /**
  * @brief Updates the player video debug info.
  */
   void UpdateVideoInfo();

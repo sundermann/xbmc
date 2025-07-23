@@ -270,46 +270,14 @@ bool CMediaPipelineWebOS::OpenAudioStream(CDVDStreamInfo& audioHint)
   {
     if (m_webOSVersion >= 6)
     {
-      std::scoped_lock lock(m_audioCriticalSection);
-      std::string codecName = "AC3";
       m_audioCodec = nullptr;
       m_audioEncoder = nullptr;
       m_audioResample = nullptr;
       m_encoderBuffers = nullptr;
-      if (!ms_codecMap.contains(audioHint.codec))
-      {
-        m_audioCodec = std::make_unique<CDVDAudioCodecFFmpeg>(m_processInfo);
-        CDVDCodecOptions options;
-        m_audioCodec->Open(audioHint, options);
-        m_audioEncoder = std::make_unique<CAEEncoderFFmpeg>();
-      }
-      else
-      {
-        codecName = ms_codecMap.at(audioHint.codec);
-      }
 
-      CVariant optInfo = {};
-      if (audioHint.codec == AV_CODEC_ID_EAC3)
-      {
-        optInfo["ac3PlusInfo"]["channels"] = audioHint.channels;
-        optInfo["ac3PlusInfo"]["frequency"] = audioHint.samplerate / 1000.0;
-
-        if (audioHint.profile == AV_PROFILE_EAC3_DDP_ATMOS)
-        {
-          optInfo["ac3PlusInfo"]["channels"] = audioHint.channels + 2;
-        }
-      }
-      else if (audioHint.codec == AV_CODEC_ID_DTS && ms_codecMap.contains(AV_CODEC_ID_DTS))
-      {
-        optInfo["dtsInfo"]["channels"] = audioHint.channels;
-        optInfo["dtsInfo"]["frequency"] = audioHint.samplerate / 1000.0;
-
-        if (audioHint.profile == AV_PROFILE_DTS_ES)
-          codecName = "DTSE";
-        if (audioHint.profile == AV_PROFILE_DTS_HD_MA_X ||
-            audioHint.profile == AV_PROFILE_DTS_HD_MA_X_IMAX)
-          codecName = "DTSX";
-      }
+      std::scoped_lock lock(m_audioCriticalSection);
+      CVariant optInfo = CVariant::VariantTypeObject;
+      const std::string codecName = SetupAudio(audioHint, optInfo);
 
       std::string output;
       CJSONVariantWriter::Write(optInfo, output, true);
@@ -747,18 +715,14 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   m_encoderBuffers = nullptr;
   if (audioHint.codec == AV_CODEC_ID_NONE)
     p["option"]["needAudio"] = false;
-  else if (!ms_codecMap.contains(audioHint.codec))
-  {
-    m_audioCodec = std::make_unique<CDVDAudioCodecFFmpeg>(m_processInfo);
-    CDVDCodecOptions options;
-    m_audioCodec->Open(audioHint, options);
-    m_audioEncoder = std::make_unique<CAEEncoderFFmpeg>();
-    contents["codec"]["audio"] = "AC3";
-  }
   else
   {
-    contents["codec"]["audio"] = ms_codecMap.at(audioHint.codec).data();
+    contents["codec"]["audio"] = SetupAudio(audioHint, contents);
   }
+
+  if (audioHint.codec == AV_CODEC_ID_EAC3 && audioHint.profile == AV_PROFILE_EAC3_DDP_ATMOS)
+    contents["immersive"] = "ATMOS";
+
   contents["format"] = "RAW";
   p["mediaTransportType"] = "BUFFERSTREAM";
   contents["provider"] = CCompileInfo::GetPackage();
@@ -800,30 +764,6 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   p["option"]["adaptiveStreaming"]["maxHeight"] = maxHeight;
   p["option"]["adaptiveStreaming"]["maxFrameRate"] = maxFramerate;
 
-  if (audioHint.codec == AV_CODEC_ID_EAC3)
-  {
-    CVariant& ac3PlusInfo = contents["ac3PlusInfo"];
-    ac3PlusInfo["channels"] = audioHint.channels;
-    ac3PlusInfo["frequency"] = audioHint.samplerate / 1000.0;
-
-    if (audioHint.profile == AV_PROFILE_EAC3_DDP_ATMOS)
-    {
-      ac3PlusInfo["channels"] = audioHint.channels + 2;
-      contents["immersive"] = "ATMOS";
-    }
-  }
-  else if (audioHint.codec == AV_CODEC_ID_DTS && ms_codecMap.contains(AV_CODEC_ID_DTS))
-  {
-    CVariant& dtsInfo = contents["dtsInfo"];
-    dtsInfo["channels"] = audioHint.channels;
-    dtsInfo["frequency"] = audioHint.samplerate / 1000.0;
-
-    if (audioHint.profile == AV_PROFILE_DTS_ES)
-      contents["codec"]["audio"] = "DTSE";
-    if (audioHint.profile == AV_PROFILE_DTS_HD_MA_X ||
-        audioHint.profile == AV_PROFILE_DTS_HD_MA_X_IMAX)
-      contents["codec"]["audio"] = "DTSX";
-  }
   payloadArgs["args"] = CVariant(CVariant::VariantTypeArray);
   payloadArgs["args"].push_back(std::move(p));
 
@@ -903,6 +843,46 @@ void CMediaPipelineWebOS::Unload()
     AcbAPI_destroy(buffer->m_acbId);
     buffer->m_acbId = 0;
   }
+}
+
+std::string CMediaPipelineWebOS::SetupAudio(CDVDStreamInfo& audioHint, CVariant& optInfo)
+{
+  std::string codecName = "AC3";
+  if (!ms_codecMap.contains(audioHint.codec))
+  {
+    m_audioCodec = std::make_unique<CDVDAudioCodecFFmpeg>(m_processInfo);
+    CDVDCodecOptions options;
+    m_audioCodec->Open(audioHint, options);
+    m_audioEncoder = std::make_unique<CAEEncoderFFmpeg>();
+  }
+  else
+  {
+    codecName = ms_codecMap.at(audioHint.codec);
+  }
+
+  if (audioHint.codec == AV_CODEC_ID_EAC3)
+  {
+    optInfo["ac3PlusInfo"]["channels"] = audioHint.channels;
+    optInfo["ac3PlusInfo"]["frequency"] = audioHint.samplerate / 1000.0;
+
+    if (audioHint.profile == AV_PROFILE_EAC3_DDP_ATMOS)
+    {
+      optInfo["ac3PlusInfo"]["channels"] = audioHint.channels + 2;
+    }
+  }
+  else if (audioHint.codec == AV_CODEC_ID_DTS)
+  {
+    optInfo["dtsInfo"]["channels"] = audioHint.channels;
+    optInfo["dtsInfo"]["frequency"] = audioHint.samplerate / 1000.0;
+
+    if (audioHint.profile == AV_PROFILE_DTS_ES)
+      codecName = "DTSE";
+    if (audioHint.profile == AV_PROFILE_DTS_HD_MA_X ||
+        audioHint.profile == AV_PROFILE_DTS_HD_MA_X_IMAX)
+      codecName = "DTSX";
+  }
+
+  return codecName;
 }
 
 void CMediaPipelineWebOS::SetHDR(const CDVDStreamInfo& hint) const
