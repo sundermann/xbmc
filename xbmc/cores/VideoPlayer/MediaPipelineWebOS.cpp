@@ -64,8 +64,8 @@ constexpr unsigned int MIN_AUDIO_RESAMPLE_BUFFER_SIZE = 4096;
 
 constexpr unsigned int PRE_BUFFER_BYTES = 0;
 constexpr unsigned int MAX_QUEUE_BUFFER_LEVEL = 0; // no additional queue
-constexpr unsigned int MIN_BUFFER_LEVEL = 90;
-constexpr unsigned int MAX_BUFFER_LEVEL = 100;
+constexpr unsigned int MIN_BUFFER_LEVEL = 0;
+constexpr unsigned int MAX_BUFFER_LEVEL = 0;
 constexpr unsigned int MIN_SRC_BUFFER_LEVEL_AUDIO = 1 * 1024 * 1024; // 1 MB
 constexpr unsigned int MIN_SRC_BUFFER_LEVEL_VIDEO = 1 * 1024 * 1024; // 1 MB
 constexpr unsigned int MAX_SRC_BUFFER_LEVEL_AUDIO = 2 * 1024 * 1024; // 2 MB
