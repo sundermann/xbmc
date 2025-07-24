@@ -282,7 +282,8 @@ bool CMediaPipelineWebOS::OpenAudioStream(CDVDStreamInfo& audioHint)
       std::string output;
       CJSONVariantWriter::Write(optInfo, output, true);
       CLog::LogF(LOGDEBUG, "changeAudioCodec: {}", output);
-      m_mediaAPIs->changeAudioCodec(codecName, output);
+      if (!m_mediaAPIs->changeAudioCodec(codecName, output))
+        CLog::LogF(LOGERROR, "Failed to change audio codec to {}", codecName);
       FlushAudioMessages();
 
       m_processInfo.SetAudioChannels(CAEUtil::GetAEChannelLayout(audioHint.channellayout));
@@ -425,7 +426,8 @@ void CMediaPipelineWebOS::CloseVideoStream(bool waitForBuffers)
 
 void CMediaPipelineWebOS::Flush(bool sync)
 {
-  m_mediaAPIs->flush();
+  if (!m_mediaAPIs->flush())
+    CLog::LogF(LOGDEBUG, "Failed to flush media APIs");
   FlushAudioMessages();
   FlushVideoMessages();
   if (m_bitstream)
@@ -770,7 +772,8 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   std::string payload;
   CJSONVariantWriter::Write(payloadArgs, payload, true);
 
-  m_mediaAPIs->notifyForeground();
+  if (!m_mediaAPIs->notifyForeground())
+    CLog::LogF(LOGERROR, "notifyForeground failed");
   CLog::LogFC(LOGDEBUG, LOGVIDEO, "Sending Load payload {}", payload);
   if (!m_mediaAPIs->Load(payload.c_str(), &CMediaPipelineWebOS::PlayerCallback, this))
   {
@@ -834,7 +837,8 @@ void CMediaPipelineWebOS::Unload()
   if (m_audioThread.joinable())
     m_audioThread.join();
 
-  m_mediaAPIs->Unload();
+  if (!m_mediaAPIs->Unload())
+    CLog::LogF(LOGERROR, "Unload failed");
 
   const auto buffer = static_cast<CStarfishVideoBuffer*>(m_picture.videoBuffer);
   if (buffer->m_acbId)
@@ -958,7 +962,8 @@ void CMediaPipelineWebOS::SetHDR(const CDVDStreamInfo& hint) const
   CJSONVariantWriter::Write(hdrData, payload, true);
 
   CLog::LogFC(LOGDEBUG, LOGVIDEO, "Setting HDR data payload {}", payload);
-  m_mediaAPIs->setHdrInfo(payload.c_str());
+  if (!m_mediaAPIs->setHdrInfo(payload.c_str()))
+    CLog::LogF(LOGERROR, "setHdrInfo failed");
 }
 
 void CMediaPipelineWebOS::FeedAudioData(const std::shared_ptr<CDVDMsg>& msg)
@@ -1157,7 +1162,8 @@ void CMediaPipelineWebOS::Process()
       else if (msg->IsType(CDVDMsg::VIDEO_DRAIN))
       {
         CLog::LogF(LOGDEBUG, "Received video message: {}", msg->GetMessageType());
-        m_mediaAPIs->pushEOS();
+        if (!m_mediaAPIs->pushEOS())
+          CLog::LogF(LOGERROR, "Failed to push EOS message");
       }
       else
       {
@@ -1325,7 +1331,8 @@ void CMediaPipelineWebOS::PlayerCallback(int32_t type, const int64_t numValue, c
         AcbAPI_setState(buffer->m_acbId, APPSTATE_FOREGROUND, PLAYSTATE_LOADED, &buffer->m_taskId);
       }
       m_renderManager.ShowVideo(true);
-      m_mediaAPIs->Play();
+      if (!m_mediaAPIs->Play())
+        CLog::LogF(LOGERROR, "Failed to play");
       m_loaded = true;
       m_flushed = true;
       Create();
