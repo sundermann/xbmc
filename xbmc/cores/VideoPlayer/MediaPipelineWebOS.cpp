@@ -945,14 +945,14 @@ void CMediaPipelineWebOS::SetHDR(const CDVDStreamInfo& hint) const
   // So return here early and let the TV detect the presence of HDR metadata on its own
   if (sei.empty())
     return;
-  hdrData["sei"] = sei;
+  hdrData[m_webOSVersion < 5 ? "mediaSei" : "sei"] = sei;
 
   CVariant vui;
   vui["transferCharacteristics"] = hint.colorTransferCharacteristic;
   vui["colorPrimaries"] = hint.colorPrimaries;
   vui["matrixCoeffs"] = hint.colorSpace;
   vui["videoFullRangeFlag"] = hint.colorRange == AVCOL_RANGE_JPEG;
-  hdrData["vui"] = vui;
+  hdrData[m_webOSVersion < 5 ? "mediaVui" : "vui"] = vui;
 
   std::string payload;
   CJSONVariantWriter::Write(hdrData, payload, true);
