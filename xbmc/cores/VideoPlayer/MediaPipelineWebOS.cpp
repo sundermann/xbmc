@@ -490,26 +490,26 @@ void CMediaPipelineWebOS::SetSpeed(const int speed)
   if (!m_loaded)
     return;
 
-  switch (speed)
+  if (speed == DVD_PLAYSPEED_PAUSE)
   {
-    case DVD_PLAYSPEED_PAUSE:
-      m_mediaAPIs->Pause();
-      return;
-    case DVD_PLAYSPEED_NORMAL:
-      m_mediaAPIs->Play();
-      break;
-    default:
-    {
-      CVariant payload;
-      payload["audioOutput"] = std::abs(speed) <= 2000;
-      payload["playRate"] = speed / 1000.0;
-      std::string output;
-      CJSONVariantWriter::Write(payload, output, true);
-
-      if (!m_mediaAPIs->SetPlayRate(output.c_str()))
-        CLog::LogF(LOGERROR, "SetPlayRate failed");
-    }
+    if (!m_mediaAPIs->Pause())
+      CLog::LogF(LOGERROR, "Pause failed");
+    return;
   }
+  if (speed == DVD_PLAYSPEED_NORMAL)
+  {
+    if (!m_mediaAPIs->Play())
+      CLog::LogF(LOGERROR, "Play failed");
+  }
+
+  CVariant payload;
+  payload["audioOutput"] = std::abs(speed) <= 2000;
+  payload["playRate"] = speed / 1000.0;
+  std::string output;
+  CJSONVariantWriter::Write(payload, output, true);
+
+  if (!m_mediaAPIs->SetPlayRate(output.c_str()))
+    CLog::LogF(LOGERROR, "SetPlayRate failed");
 }
 
 double CMediaPipelineWebOS::GetCurrentPts() const
