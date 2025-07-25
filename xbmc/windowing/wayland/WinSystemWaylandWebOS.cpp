@@ -149,11 +149,6 @@ std::unique_ptr<CSeat> CWinSystemWaylandWebOS::CreateSeat(std::uint32_t name, wa
   return std::make_unique<CSeatWebOS>(name, seat, *GetConnection());
 }
 
-float CWinSystemWaylandWebOS::GetFrameLatencyAdjustment()
-{
-  return 0.0f;
-}
-
 bool CWinSystemWaylandWebOS::OnAppLifecycleEventWrapper(LSHandle* sh, LSMessage* reply, void* ctx)
 {
   HContext* context = static_cast<HContext*>(ctx);
