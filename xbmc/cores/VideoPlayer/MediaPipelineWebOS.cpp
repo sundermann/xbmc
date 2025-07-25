@@ -498,7 +498,7 @@ bool CMediaPipelineWebOS::IsVideoInited() const
 
 int CMediaPipelineWebOS::GetAudioLevel() const
 {
-  return m_bufferLevel;
+  return std::max(m_bufferLevel.load(), m_messageQueueAudio.GetLevel());
 }
 
 bool CMediaPipelineWebOS::IsStalled() const
