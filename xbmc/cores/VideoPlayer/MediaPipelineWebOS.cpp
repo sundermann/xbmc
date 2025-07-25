@@ -83,6 +83,7 @@ auto ms_codecMap = std::map<AVCodecID, std::string_view>({
     {AV_CODEC_ID_AV1, "AV1"},
     {AV_CODEC_ID_AC3, "AC3"},
     {AV_CODEC_ID_EAC3, "AC3 PLUS"},
+    {AV_CODEC_ID_AC4, "AC4"},
 });
 
 const auto ms_hdrInfoMap = std::map<AVColorTransferCharacteristic, std::string_view>({
@@ -893,6 +894,11 @@ std::string CMediaPipelineWebOS::SetupAudio(CDVDStreamInfo& audioHint, CVariant&
     {
       optInfo["ac3PlusInfo"]["channels"] = audioHint.channels + 2;
     }
+  }
+  if (audioHint.codec == AV_CODEC_ID_AC4)
+  {
+    optInfo["ac4Info"]["channels"] = audioHint.channels;
+    optInfo["ac4Info"]["frequency"] = audioHint.samplerate / 1000.0;
   }
   else if (audioHint.codec == AV_CODEC_ID_DTS)
   {
