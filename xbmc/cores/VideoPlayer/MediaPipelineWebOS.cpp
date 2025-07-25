@@ -228,7 +228,10 @@ void CMediaPipelineWebOS::UpdateVideoInfo()
   double ts = m_messageQueueVideo.GetTimeSize();
   double mb = m_messageQueueVideo.GetDataSize() / 1024.0 / 1024.0;
   double mbps = static_cast<double>(GetVideoBitrate()) / (1024.0 * 1024.0);
-  double fps = static_cast<double>(m_videoHint.fpsrate) / static_cast<double>(m_videoHint.fpsscale);
+  double fps = 0.0;
+
+  if (m_videoHint.fpsrate && m_videoHint.fpsscale)
+    fps = static_cast<double>(m_videoHint.fpsrate) / static_cast<double>(m_videoHint.fpsscale);
 
   m_videoInfo = fmt::format("vq:{:02}% {:.3f}s, {:.3f}Mb, Mb/s:{:.2f}, fr:{:.3f}, drop:{}", level,
                             ts, mb, mbps, fps, m_droppedFrames.load());
@@ -409,8 +412,15 @@ bool CMediaPipelineWebOS::OpenVideoStream(const CDVDStreamInfo& hint)
       m_processInfo.SetVideoInterlaced(hint.interlaced);
       m_processInfo.SetVideoDimensions(hint.width, hint.height);
       m_processInfo.SetVideoDAR(static_cast<float>(hint.aspect));
-      m_processInfo.SetVideoFps(static_cast<float>(hint.fpsrate) /
-                                static_cast<float>(hint.fpsscale));
+      if (m_videoHint.fpsrate && m_videoHint.fpsscale)
+      {
+        m_processInfo.SetVideoFps(static_cast<float>(hint.fpsrate) /
+                                  static_cast<float>(hint.fpsscale));
+      }
+      else
+      {
+        m_processInfo.SetVideoFps(1.0);
+      }
 
       return true;
     }
@@ -762,8 +772,11 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   esInfo["ptsToDecode"] = m_pts.load().count();
   esInfo["videoWidth"] = videoHint.width;
   esInfo["videoHeight"] = videoHint.height;
-  esInfo["videoFpsValue"] = videoHint.fpsrate;
-  esInfo["videoFpsScale"] = videoHint.fpsscale;
+  if (videoHint.fpsrate && videoHint.fpsscale)
+  {
+    esInfo["videoFpsValue"] = videoHint.fpsrate;
+    esInfo["videoFpsScale"] = videoHint.fpsscale;
+  }
 
   CVariant& bufferingCtrInfo = p["option"]["externalStreamingInfo"]["bufferingCtrInfo"];
   bufferingCtrInfo["preBufferByte"] = PRE_BUFFER_BYTES;
@@ -804,14 +817,18 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
 
   SetHDR(videoHint);
 
-  double fps = static_cast<double>(videoHint.fpsrate) / static_cast<double>(videoHint.fpsscale);
-  m_clock.UpdateFramerate(fps);
+  double fps = 0.0;
+  if (videoHint.fpsrate && videoHint.fpsscale)
+  {
+    fps = static_cast<double>(videoHint.fpsrate) / static_cast<double>(videoHint.fpsscale);
+    m_clock.UpdateFramerate(fps);
+    m_picture.iDuration = 1000.0 / fps;
+  }
   m_picture.iWidth = videoHint.width;
   m_picture.iHeight = videoHint.height;
   m_picture.iDisplayWidth = videoHint.width;
   m_picture.iDisplayHeight = videoHint.height;
   m_picture.stereoMode = videoHint.stereo_mode;
-  m_picture.iDuration = 1000.0 / fps;
 
   const int sorient = m_processInfo.GetVideoSettings().m_Orientation;
   const int orientation =
