@@ -125,6 +125,47 @@ unsigned int SelectTranscodingSampleRate(const unsigned int sampleRate)
   }
 }
 
+void CheckDTSAvailability()
+{
+  static std::promise<void> promise;
+  static std::once_flag onceFlag;
+  static std::shared_future<void> future = promise.get_future().share();
+
+  std::call_once(onceFlag,
+                 []
+                 {
+                   CVariant request;
+                   request["configNames"] = std::vector<std::string>{"tv.model.edidType"};
+                   std::string payload;
+                   CJSONVariantWriter::Write(request, payload, true);
+
+                   HContext requestContext;
+                   requestContext.pub = true;
+                   requestContext.multiple = false;
+                   requestContext.callback = [](LSHandle* sh, LSMessage* msg, void* ctx)
+                   {
+                     CVariant config;
+                     CJSONVariantParser::Parse(HLunaServiceMessage(msg), config);
+                     if (config["configs"]["tv.model.edidType"].asString().find("dts") !=
+                         std::string::npos)
+                       ms_codecMap.emplace(AV_CODEC_ID_DTS, "DTS");
+                     promise.set_value();
+
+                     return false;
+                   };
+                   if (HLunaServiceCall(LUNA_GET_CONFIG, payload.c_str(), &requestContext))
+                   {
+                     CLog::LogF(LOGERROR, "Luna request call failed - Assuming no DTS support");
+                     promise.set_value();
+                   }
+                 });
+
+  if (future.wait_for(1s) == std::future_status::timeout)
+  {
+    CLog::LogF(LOGERROR, "Luna request call timed out - Assuming no DTS support");
+    promise.set_value();
+  }
+}
 } // namespace
 
 CMediaPipelineWebOS::CMediaPipelineWebOS(CProcessInfo& processInfo,
@@ -155,29 +196,7 @@ CMediaPipelineWebOS::CMediaPipelineWebOS(CProcessInfo& processInfo,
   m_picture.videoBuffer = new CStarfishVideoBuffer();
 
   m_webOSVersion = GetWebOSVersion();
-
-  CVariant request;
-  request["configNames"] = std::vector<std::string>{"tv.model.edidType"};
-  std::string payload;
-  CJSONVariantWriter::Write(request, payload, true);
-
-  HContext requestContext;
-  requestContext.pub = true;
-  requestContext.multiple = false;
-  requestContext.callback = [](LSHandle* sh, LSMessage* msg, void* ctx)
-  {
-    CVariant config;
-    CJSONVariantParser::Parse(HLunaServiceMessage(msg), config);
-    if (config["configs"]["tv.model.edidType"].asString().find("dts") != std::string::npos)
-      ms_codecMap.emplace(AV_CODEC_ID_DTS, "DTS");
-
-    return false;
-  };
-  if (HLunaServiceCall(LUNA_GET_CONFIG, payload.c_str(), &requestContext))
-  {
-    CLog::LogF(LOGERROR, "Luna request call failed");
-  }
-
+  CheckDTSAvailability();
   m_processInfo.GetVideoBufferManager().ReleasePools();
 }
 
