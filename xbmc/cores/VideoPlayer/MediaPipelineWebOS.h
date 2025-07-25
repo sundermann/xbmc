@@ -360,6 +360,7 @@ private:
   std::unique_ptr<ActiveAE::CActiveAEBufferPoolResample> m_audioResample{nullptr};
   std::unique_ptr<CAEEncoderFFmpeg> m_audioEncoder{nullptr};
   std::atomic<int> m_bufferLevel{0};
+  std::atomic<bool> m_eos{false};
   std::atomic<unsigned long> m_droppedFrames{0};
   std::chrono::duration<double, std::milli> m_audioClock{0.0};
 

@@ -467,12 +467,12 @@ bool CMediaPipelineWebOS::AcceptsVideoData() const
 
 bool CMediaPipelineWebOS::HasAudioData() const
 {
-  return m_bufferLevel > 0;
+  return !m_eos;
 }
 
 bool CMediaPipelineWebOS::HasVideoData() const
 {
-  return m_bufferLevel > 0;
+  return !m_eos;
 }
 
 bool CMediaPipelineWebOS::IsAudioInited() const
@@ -823,6 +823,7 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
     return false;
   }
 
+  m_eos = false;
   m_droppedFrames = 0;
   m_processInfo.SetVideoDecoderName(formatName, true);
   m_processInfo.SetVideoPixelFormat("Surface");
@@ -1390,6 +1391,7 @@ void CMediaPipelineWebOS::PlayerCallback(int32_t type, const int64_t numValue, c
     }
     case PF_EVENT_TYPE_STR_STATE_UPDATE__ENDOFSTREAM:
       m_bufferLevel = 0;
+      m_eos = true;
       break;
     case PF_EVENT_TYPE_STR_BUFFERFULL:
     {
