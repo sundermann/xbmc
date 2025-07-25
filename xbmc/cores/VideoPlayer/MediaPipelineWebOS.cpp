@@ -750,7 +750,7 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
   contents["provider"] = CCompileInfo::GetPackage();
   p["option"]["transmission"]["contentsType"] = "LIVE";
   p["option"]["transmission"]["trickType"] = "client-side";
-  p["option"]["seekMode"] = "late_Iframe";
+  p["option"]["seekMode"] = "keep-rate";
   p["option"]["useDroppedFrameEvent"] = true;
   p["option"]["externalStreamingInfo"]["streamQualityInfo"] = true;
   p["option"]["externalStreamingInfo"]["streamQualityInfoNonFlushable"] = true;
