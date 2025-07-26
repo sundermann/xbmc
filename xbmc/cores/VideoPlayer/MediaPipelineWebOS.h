@@ -37,9 +37,9 @@ class CDVDAudioCodec;
 class StarfishMediaAPIs;
 
 /**
-  * @class CMediaPipelineWebOS
-  * @brief WebOS media pipeline for audio/video playback.
-  */
+* @class CMediaPipelineWebOS
+* @brief WebOS media pipeline for audio/video playback.
+*/
 class CMediaPipelineWebOS final : public CThread
 {
 public:
