@@ -26,6 +26,7 @@
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "settings/lib/Setting.h"
+#include "utils/Base64.h"
 #include "utils/BitstreamConverter.h"
 #include "utils/JSONVariantParser.h"
 #include "utils/JSONVariantWriter.h"
@@ -84,6 +85,8 @@ auto ms_codecMap = std::map<AVCodecID, std::string_view>({
     {AV_CODEC_ID_AC3, "AC3"},
     {AV_CODEC_ID_EAC3, "AC3 PLUS"},
     {AV_CODEC_ID_AC4, "AC4"},
+    {AV_CODEC_ID_OPUS, "OPUS"},
+    {AV_CODEC_ID_MP3, "MP3"},
 });
 
 const auto ms_hdrInfoMap = std::map<AVColorTransferCharacteristic, std::string_view>({
@@ -773,6 +776,14 @@ std::string CMediaPipelineWebOS::SetupAudio(CDVDStreamInfo& audioHint, CVariant&
     if (audioHint.profile == AV_PROFILE_DTS_HD_MA_X ||
         audioHint.profile == AV_PROFILE_DTS_HD_MA_X_IMAX)
       codecName = "DTSX";
+  }
+  else if (audioHint.codec == AV_CODEC_ID_OPUS)
+  {
+    optInfo["opusInfo"]["channels"] = audioHint.channels;
+    optInfo["opusInfo"]["frequency"] = audioHint.samplerate / 1000.0;
+    optInfo["opusInfo"]["streamHeader"] =
+        Base64::Encode(reinterpret_cast<const char*>(audioHint.extradata.GetData()),
+                       audioHint.extradata.GetSize());
   }
 
   return codecName;
