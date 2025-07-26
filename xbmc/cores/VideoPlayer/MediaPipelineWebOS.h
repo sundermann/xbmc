@@ -37,21 +37,21 @@ class CDVDAudioCodec;
 class StarfishMediaAPIs;
 
 /**
-* @class CMediaPipelineWebOS
-* @brief WebOS media pipeline for audio/video playback.
-*/
+ * @class CMediaPipelineWebOS
+ * @brief WebOS media pipeline for audio/video playback.
+ */
 class CMediaPipelineWebOS final : public CThread
 {
 public:
   /**
-  * @brief Construct the WebOS media pipeline.
-  * @param processInfo Reference to process information.
-  * @param renderManager Reference to the render manager.
-  * @param clock Reference to the clock for timing.
-  * @param parent Parent message queue for control messages.
-  * @param overlay Overlay container for subtitle rendering.
-  * @param hasAudio True if audio stream is present, false otherwise.
-  */
+   * @brief Construct the WebOS media pipeline.
+   * @param processInfo Reference to process information.
+   * @param renderManager Reference to the render manager.
+   * @param clock Reference to the clock for timing.
+   * @param parent Parent message queue for control messages.
+   * @param overlay Overlay container for subtitle rendering.
+   * @param hasAudio True if audio stream is present, false otherwise.
+   */
   explicit CMediaPipelineWebOS(CProcessInfo& processInfo,
                                CRenderManager& renderManager,
                                CDVDClock& clock,
@@ -60,288 +60,288 @@ public:
                                bool hasAudio);
 
   /**
-  * @brief Destructor, cleans up and unloads streams.
-  */
+   * @brief Destructor, cleans up and unloads streams.
+   */
   ~CMediaPipelineWebOS() override;
 
   /**
-  * @brief Check if a codec is supported by the pipeline.
-  * @param codec AVCodecID to check.
-  * @return True if supported, false otherwise.
-  */
+   * @brief Check if a codec is supported by the pipeline.
+   * @param codec AVCodecID to check.
+   * @return True if supported, false otherwise.
+   */
   static bool Supports(AVCodecID codec);
 
   /**
-  * @brief Flush all pending video messages.
-  */
+   * @brief Flush all pending video messages.
+   */
   void FlushVideoMessages();
 
   /**
-  * @brief Flush all pending audio messages.
-  */
+   * @brief Flush all pending audio messages.
+   */
   void FlushAudioMessages();
 
   /**
-  * @brief Open an audio stream using provided hints.
-  * @param audioHint Audio stream information.
-  * @return True on success.
-  */
+   * @brief Open an audio stream using provided hints.
+   * @param audioHint Audio stream information.
+   * @return True on success.
+   */
   bool OpenAudioStream(CDVDStreamInfo& audioHint);
 
   /**
-  * @brief Open a video stream using provided hints.
-  * @param hint Video stream information.
-  * @return True on success.
-  */
+   * @brief Open a video stream using provided hints.
+   * @param hint Video stream information.
+   * @return True on success.
+   */
   bool OpenVideoStream(CDVDStreamInfo hint);
 
   /**
-  * @brief Close the audio stream.
-  * @param waitForBuffers If true, wait until buffers are processed.
-  */
+   * @brief Close the audio stream.
+   * @param waitForBuffers If true, wait until buffers are processed.
+   */
   void CloseAudioStream(bool waitForBuffers);
 
   /**
-  * @brief Close the video stream.
-  * @param waitForBuffers If true, wait until buffers are processed.
-  */
+   * @brief Close the video stream.
+   * @param waitForBuffers If true, wait until buffers are processed.
+   */
   void CloseVideoStream(bool waitForBuffers);
 
   /**
-  * @brief Flush both audio and video pipelines.
-  * @param sync If true, flush synchronously.
-  */
+   * @brief Flush both audio and video pipelines.
+   * @param sync If true, flush synchronously.
+   */
   void Flush(bool sync);
 
   /**
-  * @brief Check if pipeline can accept more audio data.
-  * @return True if accepting audio data.
-  */
+   * @brief Check if pipeline can accept more audio data.
+   * @return True if accepting audio data.
+   */
   bool AcceptsAudioData() const;
 
   /**
-  * @brief Check if pipeline can accept more video data.
-  * @return True if accepting video data.
-  */
+   * @brief Check if pipeline can accept more video data.
+   * @return True if accepting video data.
+   */
   bool AcceptsVideoData() const;
 
   /**
-  * @brief Check if there is buffered audio data.
-  * @return True if audio data buffered.
-  */
+   * @brief Check if there is buffered audio data.
+   * @return True if audio data buffered.
+   */
   bool HasAudioData() const;
 
   /**
- * @brief Check if there is buffered video data.
- * @return True if video data buffered.
- */
+   * @brief Check if there is buffered video data.
+   * @return True if video data buffered.
+   */
   bool HasVideoData() const;
 
   /**
-  * @brief Check if audio subsystem is initialized.
-  * @return True if initialized.
-  */
+   * @brief Check if audio subsystem is initialized.
+   * @return True if initialized.
+   */
   bool IsAudioInited() const;
 
   /**
-  * @brief Check if video subsystem is initialized.
-  * @return True if initialized.
-  */
+   * @brief Check if video subsystem is initialized.
+   * @return True if initialized.
+   */
   bool IsVideoInited() const;
 
   /**
-  * @brief Get current audio buffer level.
-  * @return Buffer level percentage.
-  */
+   * @brief Get current audio buffer level.
+   * @return Buffer level percentage.
+   */
   int GetAudioLevel() const;
 
   /**
-  * @brief Check if playback is stalled.
-  * @return True if stalled.
-  */
+   * @brief Check if playback is stalled.
+   * @return True if stalled.
+   */
   bool IsStalled() const;
 
   /**
-  * @brief Send a message to the audio queue.
-  * @param msg Message to send.
-  * @param priority Message priority.
-  */
+   * @brief Send a message to the audio queue.
+   * @param msg Message to send.
+   * @param priority Message priority.
+   */
   void SendAudioMessage(const std::shared_ptr<CDVDMsg>& msg, int priority);
 
   /**
-  * @brief Send a message to the video queue.
-  * @param msg Message to send.
-  * @param priority Message priority.
-  */
+   * @brief Send a message to the video queue.
+   * @param msg Message to send.
+   * @param priority Message priority.
+   */
   void SendVideoMessage(const std::shared_ptr<CDVDMsg>& msg, int priority);
 
   /**
-  * @brief Set playback speed.
-  * @param speed Playback rate (per-mille units).
-  */
+   * @brief Set playback speed.
+   * @param speed Playback rate (per-mille units).
+   */
   void SetSpeed(int speed);
 
   /**
-  * @brief Get current presentation timestamp in seconds.
-  * @return Current PTS (seconds).
-  */
+   * @brief Get current presentation timestamp in seconds.
+   * @return Current PTS (seconds).
+   */
   double GetCurrentPts() const;
 
   /**
-  * @brief Get number of audio channels configured.
-  * @return Channel count.
-  */
+   * @brief Get number of audio channels configured.
+   * @return Channel count.
+   */
   int GetAudioChannels() const { return m_audioHint.channels; }
 
   /**
-  * @brief Enable or disable subtitle rendering.
-  * @param enable True to enable subtitles.
-  */
+   * @brief Enable or disable subtitle rendering.
+   * @param enable True to enable subtitles.
+   */
   void EnableSubtitle(bool enable);
 
   /**
-  * @brief Check if subtitles are enabled.
-  * @return True if enabled.
-  */
+   * @brief Check if subtitles are enabled.
+   * @return True if enabled.
+   */
   bool IsSubtitleEnabled() const;
 
   /**
-  * @brief Get current subtitle display delay.
-  * @return Delay in seconds.
-  */
+   * @brief Get current subtitle display delay.
+   * @return Delay in seconds.
+   */
   double GetSubtitleDelay() const;
 
   /**
-  * @brief Set subtitle display delay.
-  * @param delay Delay in seconds.
-  */
+   * @brief Set subtitle display delay.
+   * @param delay Delay in seconds.
+   */
   void SetSubtitleDelay(double delay);
 
   /**
-  * @return Video bitrate in bits per second.
-  */
+   * @return Video bitrate in bits per second.
+   */
   int GetVideoBitrate() const;
 
   /**
-  * @return Audio stream debug info
-  */
+   * @return Audio stream debug info
+   */
   std::string GetAudioInfo() const;
 
   /**
-  *
-  * @return Video stream debug info
-  */
+   *
+   * @return Video stream debug info
+   */
   std::string GetVideoInfo() const;
 
 protected:
   /**
-  * @brief Video processing thread loop.
-  *
-  * Continuously reads messages and feeds video data to the pipeline.
-  */
+   * @brief Video processing thread loop.
+   *
+   * Continuously reads messages and feeds video data to the pipeline.
+   */
   void Process() override;
 
   /**
-  * @brief Audio processing thread loop.
-  *
-  * Continuously reads messages and feeds audio data to the pipeline.
-  */
+   * @brief Audio processing thread loop.
+   *
+   * Continuously reads messages and feeds audio data to the pipeline.
+   */
   void ProcessAudio();
 
 private:
   /**
-  * @brief Send HDR metadata to media pipeline.
-  * @param hint Stream information containing HDR details.
-  */
+   * @brief Send HDR metadata to media pipeline.
+   * @param hint Stream information containing HDR details.
+   */
   void SetHDR(const CDVDStreamInfo& hint) const;
 
   /**
-  * @brief Feed a video packet to the media API.
-  * @param msg Demux packet wrapped in a CDVDMsg.
-  */
+   * @brief Feed a video packet to the media API.
+   * @param msg Demux packet wrapped in a CDVDMsg.
+   */
   void FeedVideoData(const std::shared_ptr<CDVDMsg>& msg);
 
   /**
-  * @brief Render subtitle and overlay graphics at given timestamp.
-  * @param pts Presentation timestamp in seconds.
-  */
+   * @brief Render subtitle and overlay graphics at given timestamp.
+   * @param pts Presentation timestamp in seconds.
+   */
   void ProcessOverlays(double pts) const;
 
   /**
-  * @brief Feed an audio packet to the media API.
-  * @param msg Demux packet wrapped in a CDVDMsg.
-  */
+   * @brief Feed an audio packet to the media API.
+   * @param msg Demux packet wrapped in a CDVDMsg.
+   */
   void FeedAudioData(const std::shared_ptr<CDVDMsg>& msg);
 
   /**
-  * @brief Configure and load media streams into the pipeline.
-  * @param videoHint Video stream information.
-  * @param audioHint Audio stream information.
-  * @return True if loading succeeded.
-  */
+   * @brief Configure and load media streams into the pipeline.
+   * @param videoHint Video stream information.
+   * @param audioHint Audio stream information.
+   * @return True if loading succeeded.
+   */
   bool Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHint);
 
   /**
-  * @brief Unloads the media pipeline for cleanup.
-  */
+   * @brief Unloads the media pipeline for cleanup.
+   */
   void Unload();
 
   /**
-  * @brief Sets up audio stream parameters and transcoding if necessary.
-  * @param audioHint Audio hints from demuxer
-  * @param optInfo CVariant to describe audio format in
-  * @return starfish codec name
-  */
+   * @brief Sets up audio stream parameters and transcoding if necessary.
+   * @param audioHint Audio hints from demuxer
+   * @param optInfo CVariant to describe audio format in
+   * @return starfish codec name
+   */
   std::string SetupAudio(CDVDStreamInfo& audioHint, CVariant& optInfo);
 
   /**
-  * @brief Sets up the bitstream converter for video streams.
-  * @param hint Video stream hint.
-  */
+   * @brief Sets up the bitstream converter for video streams.
+   * @param hint Video stream hint.
+   */
   void SetupBitstreamConverter(CDVDStreamInfo& hint);
 
   /**
-  * @brief Updates the player video debug info.
-  */
+   * @brief Updates the player video debug info.
+   */
   void UpdateVideoInfo();
 
   /**
-  * @brief Updates the player video debug info.
-  */
+   * @brief Updates the player video debug info.
+   */
   void UpdateAudioInfo();
 
   /**
-  * @brief Updates ActiveAE volume setting based on current audio state.
-  * @param playing True if media is currently playing, false otherwise.
-  */
+   * @brief Updates ActiveAE volume setting based on current audio state.
+   * @param playing True if media is currently playing, false otherwise.
+   */
   void UpdateGUISounds(bool playing);
 
   /**
-  * @brief Callback for media events.
-  * @param type Event type identifier.
-  * @param numValue Numeric associated value.
-  * @param strValue String associated value.
-  */
+   * @brief Callback for media events.
+   * @param type Event type identifier.
+   * @param numValue Numeric associated value.
+   * @param strValue String associated value.
+   */
   void PlayerCallback(int32_t type, int64_t numValue, const char* strValue);
 
   /**
-  * @brief Static trampoline for PlayerCallback.
-  * @param type Event type identifier.
-  * @param numValue Numeric associated value.
-  * @param strValue String associated value.
-  * @param data Pointer to CMediaPipelineWebOS instance.
-  */
+   * @brief Static trampoline for PlayerCallback.
+   * @param type Event type identifier.
+   * @param numValue Numeric associated value.
+   * @param strValue String associated value.
+   * @param data Pointer to CMediaPipelineWebOS instance.
+   */
   static void PlayerCallback(int32_t type, int64_t numValue, const char* strValue, void* data);
 
   /**
-  * @brief ACB app-switching callback.
-  * @param acbId ACB context ID.
-  * @param taskId Task identifier.
-  * @param eventType Event category.
-  * @param appState Application state value.
-  * @param playState Playback state value.
-  * @param reply Debug or info string.
-  */
+   * @brief ACB app-switching callback.
+   * @param acbId ACB context ID.
+   * @param taskId Task identifier.
+   * @param eventType Event category.
+   * @param appState Application state value.
+   * @param playState Playback state value.
+   * @param reply Debug or info string.
+   */
   static void AcbCallback(
       long acbId, long taskId, long eventType, long appState, long playState, const char* reply);
 

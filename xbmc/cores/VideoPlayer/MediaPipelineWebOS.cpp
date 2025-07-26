@@ -1068,8 +1068,8 @@ void CMediaPipelineWebOS::ProcessOverlays(const double pts) const
   std::vector<std::shared_ptr<CDVDOverlay>> overlays;
   std::scoped_lock<CCriticalSection> lock(m_overlayContainer);
 
-  //Check all overlays and render those that should be rendered, based on time and forced
-  //Both forced and subs should check timing
+  // Check all overlays and render those that should be rendered, based on time and forced
+  // Both forced and subs should check timing
   for (const std::shared_ptr<CDVDOverlay>& overlay : *m_overlayContainer.GetOverlays())
   {
     if (!overlay->bForced && !m_subtitle)
