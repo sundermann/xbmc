@@ -199,6 +199,14 @@ CMediaPipelineWebOS::CMediaPipelineWebOS(CProcessInfo& processInfo,
   m_webOSVersion = GetWebOSVersion();
   CheckDTSAvailability();
   m_processInfo.GetVideoBufferManager().ReleasePools();
+
+  const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  m_convertDovi = settings->GetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
+
+  const std::shared_ptr allowedHdrFormatsSetting(std::dynamic_pointer_cast<CSettingList>(
+      settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_ALLOWEDHDRFORMATS)));
+  m_removeDovi = !CSettingUtils::FindIntInList(
+      allowedHdrFormatsSetting, CSettings::VIDEOPLAYER_ALLOWED_HDR_TYPE_DOLBY_VISION);
 }
 
 CMediaPipelineWebOS::~CMediaPipelineWebOS()
@@ -339,7 +347,7 @@ bool CMediaPipelineWebOS::OpenAudioStream(CDVDStreamInfo& audioHint)
   return true;
 }
 
-bool CMediaPipelineWebOS::OpenVideoStream(const CDVDStreamInfo& hint)
+bool CMediaPipelineWebOS::OpenVideoStream(CDVDStreamInfo hint)
 {
   if (!Supports(hint.codec))
   {
@@ -352,61 +360,8 @@ bool CMediaPipelineWebOS::OpenVideoStream(const CDVDStreamInfo& hint)
     if (m_videoHint.codec == hint.codec)
     {
       std::scoped_lock lock(m_videoCriticalSection);
+      SetupBitstreamConverter(hint);
       m_videoHint = hint;
-
-      if (hint.codec == AV_CODEC_ID_AVS || hint.codec == AV_CODEC_ID_CAVS ||
-          hint.codec == AV_CODEC_ID_H264)
-      {
-        // check for h264-avcC and convert to h264-annex-b
-        if (hint.extradata && !hint.cryptoSession)
-        {
-          m_bitstream = std::make_unique<CBitstreamConverter>();
-          if (!m_bitstream->Open(hint.codec, m_videoHint.extradata.GetData(),
-                                 static_cast<int>(m_videoHint.extradata.GetSize()), true))
-          {
-            m_bitstream.reset();
-          }
-        }
-      }
-      else if (hint.codec == AV_CODEC_ID_HEVC)
-      {
-        const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-        bool convertDovi{false};
-        bool removeDovi{false};
-
-        convertDovi = settings->GetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
-
-        const std::shared_ptr allowedHdrFormatsSetting(std::dynamic_pointer_cast<CSettingList>(
-            settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_ALLOWEDHDRFORMATS)));
-        removeDovi = !CSettingUtils::FindIntInList(
-            allowedHdrFormatsSetting, CSettings::VIDEOPLAYER_ALLOWED_HDR_TYPE_DOLBY_VISION);
-
-        // check for hevc-hvcC and convert to h265-annex-b
-        if (hint.extradata && !hint.cryptoSession)
-        {
-          m_bitstream = std::make_unique<CBitstreamConverter>();
-          if (!m_bitstream->Open(hint.codec, m_videoHint.extradata.GetData(),
-                                 static_cast<int>(hint.extradata.GetSize()), true))
-          {
-            m_bitstream.reset();
-          }
-
-          if (m_bitstream)
-          {
-            m_bitstream->SetRemoveDovi(removeDovi);
-
-            // webOS doesn't support HDR10+ and it can cause issues
-            m_bitstream->SetRemoveHdr10Plus(true);
-
-            // Only set for profile 7, container hint allows to skip parsing unnecessarily
-            // set profile 8 and single layer when converting
-            if (!removeDovi && convertDovi && hint.dovi.dv_profile == 7)
-            {
-              m_bitstream->SetConvertDovi(true);
-            }
-          }
-        }
-      }
       Flush(true);
 
       m_processInfo.SetVideoInterlaced(hint.interlaced);
@@ -603,112 +558,13 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
     return false;
   }
 
-  std::string formatName = "starfish-" + StringUtils::ToLower(ms_codecMap.at(videoHint.codec));
-
+  SetupBitstreamConverter(videoHint);
   CVariant& contents = p["option"]["externalStreamingInfo"]["contents"];
-  switch (videoHint.codec)
+  if (videoHint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
   {
-    case AV_CODEC_ID_AVS:
-    case AV_CODEC_ID_CAVS:
-    case AV_CODEC_ID_H264:
-      // check for h264-avcC and convert to h264-annex-b
-      if (videoHint.extradata && !videoHint.cryptoSession)
-      {
-        m_bitstream = std::make_unique<CBitstreamConverter>();
-        if (!m_bitstream->Open(videoHint.codec, videoHint.extradata.GetData(),
-                               static_cast<int>(videoHint.extradata.GetSize()), true))
-        {
-          m_bitstream.reset();
-        }
-      }
-      break;
-    case AV_CODEC_ID_HEVC:
-    {
-      const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-      bool convertDovi{false};
-      bool removeDovi{false};
-
-      if (settings)
-      {
-        convertDovi = settings->GetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
-
-        const std::shared_ptr allowedHdrFormatsSetting(std::dynamic_pointer_cast<CSettingList>(
-            settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_ALLOWEDHDRFORMATS)));
-        removeDovi = !CSettingUtils::FindIntInList(
-            allowedHdrFormatsSetting, CSettings::VIDEOPLAYER_ALLOWED_HDR_TYPE_DOLBY_VISION);
-      }
-
-      bool isDvhe = videoHint.codec_tag == MKTAG('d', 'v', 'h', 'e');
-      bool isDvh1 = videoHint.codec_tag == MKTAG('d', 'v', 'h', '1');
-
-      // some files don't have dvhe or dvh1 tag set up but have Dolby Vision side data
-      if (!isDvhe && !isDvh1 && videoHint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
-      {
-        // page 10, table 2 from https://professional.dolby.com/siteassets/content-creation/dolby-vision-for-content-creators/dolby-vision-streams-within-the-http-live-streaming-format-v2.0-13-november-2018.pdf
-        if (videoHint.codec_tag == MKTAG('h', 'v', 'c', '1'))
-          isDvh1 = true;
-        else
-          isDvhe = true;
-      }
-
-      // check for hevc-hvcC and convert to h265-annex-b
-      if (videoHint.extradata && !videoHint.cryptoSession)
-      {
-        m_bitstream = std::make_unique<CBitstreamConverter>();
-        if (!m_bitstream->Open(videoHint.codec, videoHint.extradata.GetData(),
-                               static_cast<int>(videoHint.extradata.GetSize()), true))
-        {
-          m_bitstream.reset();
-        }
-
-        if (m_bitstream)
-        {
-          m_bitstream->SetRemoveDovi(removeDovi);
-
-          // webOS doesn't support HDR10+ and it can cause issues
-          m_bitstream->SetRemoveHdr10Plus(true);
-
-          // Only set for profile 7, container hint allows to skip parsing unnecessarily
-          // set profile 8 and single layer when converting
-          if (!removeDovi && convertDovi && videoHint.dovi.dv_profile == 7)
-          {
-            videoHint.dovi.dv_profile = 8;
-            videoHint.dovi.el_present_flag = false;
-            m_bitstream->SetConvertDovi(true);
-          }
-        }
-      }
-
-      if (!removeDovi && (isDvhe || isDvh1))
-      {
-        formatName = isDvhe ? "starfish-dvhe" : "starfish-dvh1";
-
-        contents["DolbyHdrInfo"]["encryptionType"] = "clear"; //"clear", "bl", "el", "all"
-        contents["DolbyHdrInfo"]["profileId"] = videoHint.dovi.dv_profile; // profile 0-9
-        contents["DolbyHdrInfo"]["trackType"] = videoHint.dovi.el_present_flag ? "dual" : "single";
-      }
-
-      if (removeDovi && (isDvhe || isDvh1))
-        videoHint.hdrType = StreamHdrType::HDR_TYPE_HDR10;
-
-      break;
-    }
-    case AV_CODEC_ID_AV1:
-    {
-      if (videoHint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION &&
-          videoHint.dovi.dv_profile == 10)
-      {
-        formatName = "starfish-dav1";
-
-        contents["DolbyHdrInfo"]["encryptionType"] = "clear"; //"clear", "bl", "el", "all"
-        contents["DolbyHdrInfo"]["profileId"] = videoHint.dovi.dv_profile; // profile 10
-        contents["DolbyHdrInfo"]["trackType"] = "single"; // "single" / "dual"
-      }
-
-      break;
-    }
-    default:
-      break;
+    contents["DolbyHdrInfo"]["encryptionType"] = "clear"; //"clear", "bl", "el", "all"
+    contents["DolbyHdrInfo"]["profileId"] = videoHint.dovi.dv_profile;
+    contents["DolbyHdrInfo"]["trackType"] = videoHint.dovi.el_present_flag ? "dual" : "single";
   }
 
   using namespace KODI::WINDOWING::WAYLAND;
@@ -835,6 +691,9 @@ bool CMediaPipelineWebOS::Load(CDVDStreamInfo videoHint, CDVDStreamInfo audioHin
 
   m_eos = false;
   m_droppedFrames = 0;
+  std::string formatName = fmt::format(
+      "starfish-{}{}", videoHint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION ? "d" : "",
+      StringUtils::ToLower(ms_codecMap.at(videoHint.codec)));
   m_processInfo.SetVideoDecoderName(formatName, true);
   m_processInfo.SetVideoPixelFormat("Surface");
   m_processInfo.SetVideoDimensions(videoHint.width, videoHint.height);
@@ -917,6 +776,58 @@ std::string CMediaPipelineWebOS::SetupAudio(CDVDStreamInfo& audioHint, CVariant&
   }
 
   return codecName;
+}
+
+void CMediaPipelineWebOS::SetupBitstreamConverter(CDVDStreamInfo& hint)
+{
+  if (hint.codec == AV_CODEC_ID_AVS || hint.codec == AV_CODEC_ID_CAVS ||
+      hint.codec == AV_CODEC_ID_H264 || hint.codec == AV_CODEC_ID_HEVC)
+  {
+    if (hint.extradata && !hint.cryptoSession)
+    {
+      m_bitstream = std::make_unique<CBitstreamConverter>();
+      if (m_bitstream->Open(hint.codec, m_videoHint.extradata.GetData(),
+                            static_cast<int>(m_videoHint.extradata.GetSize()), true))
+      {
+        if (hint.codec == AV_CODEC_ID_HEVC)
+        {
+          m_bitstream->SetRemoveDovi(m_removeDovi);
+
+          // webOS doesn't support HDR10+ and it can cause issues
+          m_bitstream->SetRemoveHdr10Plus(true);
+
+          // Only set for profile 7, container hint allows to skip parsing unnecessarily
+          // set profile 8 and single layer when converting
+          if (!m_removeDovi && m_convertDovi && hint.dovi.dv_profile == 7)
+          {
+            m_bitstream->SetConvertDovi(true);
+            hint.dovi.dv_profile = 8;
+            hint.dovi.el_present_flag = false;
+          }
+
+          bool isDvhe = hint.codec_tag == MKTAG('d', 'v', 'h', 'e');
+          bool isDvh1 = hint.codec_tag == MKTAG('d', 'v', 'h', '1');
+
+          // some files don't have dvhe or dvh1 tag set up but have Dolby Vision side data
+          if (!isDvhe && !isDvh1 && hint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
+          {
+            // page 10, table 2 from https://professional.dolby.com/siteassets/content-creation/dolby-vision-for-content-creators/dolby-vision-streams-within-the-http-live-streaming-format-v2.0-13-november-2018.pdf
+            if (hint.codec_tag == MKTAG('h', 'v', 'c', '1'))
+              isDvh1 = true;
+            else
+              isDvhe = true;
+          }
+
+          if (m_removeDovi && (isDvhe || isDvh1))
+            hint.hdrType = StreamHdrType::HDR_TYPE_HDR10;
+        }
+      }
+      else
+      {
+        m_bitstream.reset();
+      }
+    }
+  }
 }
 
 void CMediaPipelineWebOS::SetHDR(const CDVDStreamInfo& hint) const

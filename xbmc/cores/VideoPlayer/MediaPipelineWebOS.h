@@ -93,7 +93,7 @@ public:
   * @param hint Video stream information.
   * @return True on success.
   */
-  bool OpenVideoStream(const CDVDStreamInfo& hint);
+  bool OpenVideoStream(CDVDStreamInfo hint);
 
   /**
   * @brief Close the audio stream.
@@ -295,6 +295,12 @@ private:
   std::string SetupAudio(CDVDStreamInfo& audioHint, CVariant& optInfo);
 
   /**
+  * @brief Sets up the bitstream converter for video streams.
+  * @param hint Video stream hint.
+  */
+  void SetupBitstreamConverter(CDVDStreamInfo& hint);
+
+  /**
   * @brief Updates the player video debug info.
   */
   void UpdateVideoInfo();
@@ -343,6 +349,8 @@ private:
   std::mutex m_eventMutex;
 
   unsigned int m_webOSVersion{4};
+  bool m_convertDovi{false};
+  bool m_removeDovi{false};
   std::atomic<bool> m_stalled{false};
   std::atomic<bool> m_loaded{false};
   std::atomic<bool> m_flushed{false};
