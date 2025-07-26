@@ -8,16 +8,8 @@
 
 #pragma once
 
+#include "cores/VideoPlayer/Buffers/VideoBufferStarfish.h"
 #include "cores/VideoPlayer/VideoRenderers/LinuxRendererGLES.h"
-
-class CStarfishVideoBuffer : public CVideoBuffer
-{
-public:
-  explicit CStarfishVideoBuffer() : CVideoBuffer(0) {}
-  AVPixelFormat GetFormat() override { return AV_PIX_FMT_NONE; }
-  long m_acbId{0};
-  long m_taskId{0};
-};
 
 class CRendererStarfish : public CBaseRenderer
 {

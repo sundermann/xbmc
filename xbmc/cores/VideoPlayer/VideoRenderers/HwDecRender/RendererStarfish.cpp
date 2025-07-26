@@ -36,7 +36,7 @@ bool CRendererStarfish::Configure(const VideoPicture& picture,
                                   const unsigned int orientation)
 {
   m_videoBuffer = static_cast<CStarfishVideoBuffer*>(picture.videoBuffer);
-  if (m_videoBuffer->m_acbId)
+  if (m_videoBuffer->GetAcbHandle())
   {
     EnableAlwaysClip();
   }
@@ -117,14 +117,14 @@ void CRendererStarfish::ManageRenderArea()
     {
       winSystem->SetExportedWindow(origRect, m_sourceRect, m_destRect);
     }
-    else if (m_videoBuffer->m_acbId)
+    else if (m_videoBuffer->GetAcbHandle())
     {
       AcbAPI_setCustomDisplayWindow(
-          m_videoBuffer->m_acbId, static_cast<long>(m_sourceRect.x1),
+          m_videoBuffer->GetAcbHandle()->Id(), static_cast<long>(m_sourceRect.x1),
           static_cast<long>(m_sourceRect.y1), static_cast<long>(m_sourceRect.Width()),
           static_cast<long>(m_sourceRect.Height()), static_cast<long>(m_destRect.x1),
           static_cast<long>(m_destRect.y1), static_cast<long>(m_destRect.Width()),
-          static_cast<long>(m_destRect.Height()), false, &m_videoBuffer->m_taskId);
+          static_cast<long>(m_destRect.Height()), false, &m_videoBuffer->GetAcbHandle()->TaskId());
     }
     m_exportedSourceRect = m_sourceRect;
     m_exportedDestRect = m_destRect;
