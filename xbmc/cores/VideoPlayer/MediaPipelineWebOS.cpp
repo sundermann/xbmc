@@ -1013,8 +1013,11 @@ void CMediaPipelineWebOS::FeedAudioData(const std::shared_ptr<CDVDMsg>& msg)
 {
   DemuxPacket* packet = std::static_pointer_cast<CDVDMsgDemuxerPacket>(msg)->GetPacket();
 
-  const auto pts = std::chrono::duration_cast<std::chrono::nanoseconds>(
+  auto pts = std::chrono::duration_cast<std::chrono::nanoseconds>(
       std::chrono::duration<double, std::ratio<1, DVD_TIME_BASE>>(packet->pts));
+
+  if (pts < 0ns)
+    pts = 0ns;
 
   CVariant payload;
   payload["bufferAddr"] = fmt::format("{:#x}", reinterpret_cast<std::uintptr_t>(packet->pData));
@@ -1059,6 +1062,9 @@ void CMediaPipelineWebOS::FeedVideoData(const std::shared_ptr<CDVDMsg>& msg)
 
   if (m_videoHint.ptsinvalid)
     pts = dts;
+
+  if (pts < 0ns)
+    pts = 0ns;
 
   uint8_t* data = packet->pData;
   size_t size = packet->iSize;
