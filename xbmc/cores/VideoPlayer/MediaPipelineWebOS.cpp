@@ -926,7 +926,7 @@ void CMediaPipelineWebOS::FeedAudioData(const std::shared_ptr<CDVDMsg>& msg)
       std::chrono::duration<double, std::ratio<1, DVD_TIME_BASE>>(packet->pts));
 
   if (pts < 0ns)
-    pts = 0ns;
+    return;
 
   CVariant payload;
   payload["bufferAddr"] = fmt::format("{:#x}", reinterpret_cast<std::uintptr_t>(packet->pData));
@@ -973,7 +973,7 @@ void CMediaPipelineWebOS::FeedVideoData(const std::shared_ptr<CDVDMsg>& msg)
     pts = dts;
 
   if (pts < 0ns)
-    pts = 0ns;
+    return;
 
   uint8_t* data = packet->pData;
   size_t size = packet->iSize;
