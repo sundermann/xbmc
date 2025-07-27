@@ -1170,7 +1170,7 @@ void CMediaPipelineWebOS::ProcessAudio()
               const double sublevel =
                   settings->GetNumber(CSettings::SETTING_AUDIOOUTPUT_MIXSUBLEVEL) / 100.0;
               m_audioResample->Create(
-                  0, true, settings->GetBool(CSettings::SETTING_AUDIOOUTPUT_STEREOUPMIX),
+                  0, false, settings->GetBool(CSettings::SETTING_AUDIOOUTPUT_STEREOUPMIX),
                   !settings->GetBool(CSettings::SETTING_AUDIOOUTPUT_MAINTAINORIGINALVOLUME),
                   static_cast<float>(sublevel));
               m_audioResample->FillBuffer();
