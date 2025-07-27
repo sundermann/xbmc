@@ -349,8 +349,6 @@ private:
   std::mutex m_eventMutex;
 
   unsigned int m_webOSVersion{4};
-  bool m_convertDovi{false};
-  bool m_removeDovi{false};
   std::atomic<bool> m_stalled{false};
   std::atomic<bool> m_loaded{false};
   std::atomic<bool> m_flushed{false};

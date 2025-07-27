@@ -202,14 +202,6 @@ CMediaPipelineWebOS::CMediaPipelineWebOS(CProcessInfo& processInfo,
   m_webOSVersion = GetWebOSVersion();
   CheckDTSAvailability();
   m_processInfo.GetVideoBufferManager().ReleasePools();
-
-  const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-  m_convertDovi = settings->GetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
-
-  const std::shared_ptr allowedHdrFormatsSetting(std::dynamic_pointer_cast<CSettingList>(
-      settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_ALLOWEDHDRFORMATS)));
-  m_removeDovi = !CSettingUtils::FindIntInList(
-      allowedHdrFormatsSetting, CSettings::VIDEOPLAYER_ALLOWED_HDR_TYPE_DOLBY_VISION);
 }
 
 CMediaPipelineWebOS::~CMediaPipelineWebOS()
@@ -791,6 +783,14 @@ std::string CMediaPipelineWebOS::SetupAudio(CDVDStreamInfo& audioHint, CVariant&
 
 void CMediaPipelineWebOS::SetupBitstreamConverter(CDVDStreamInfo& hint)
 {
+  const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  const bool convertDovi = settings->GetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
+
+  const std::shared_ptr allowedHdrFormatsSetting(std::dynamic_pointer_cast<CSettingList>(
+      settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_ALLOWEDHDRFORMATS)));
+  const bool removeDovi = !CSettingUtils::FindIntInList(
+      allowedHdrFormatsSetting, CSettings::VIDEOPLAYER_ALLOWED_HDR_TYPE_DOLBY_VISION);
+
   if (hint.codec == AV_CODEC_ID_AVS || hint.codec == AV_CODEC_ID_CAVS ||
       hint.codec == AV_CODEC_ID_H264 || hint.codec == AV_CODEC_ID_HEVC)
   {
@@ -802,14 +802,14 @@ void CMediaPipelineWebOS::SetupBitstreamConverter(CDVDStreamInfo& hint)
       {
         if (hint.codec == AV_CODEC_ID_HEVC)
         {
-          m_bitstream->SetRemoveDovi(m_removeDovi);
+          m_bitstream->SetRemoveDovi(removeDovi);
 
           // webOS doesn't support HDR10+ and it can cause issues
           m_bitstream->SetRemoveHdr10Plus(true);
 
           // Only set for profile 7, container hint allows to skip parsing unnecessarily
           // set profile 8 and single layer when converting
-          if (!m_removeDovi && m_convertDovi && hint.dovi.dv_profile == 7)
+          if (!removeDovi && convertDovi && hint.dovi.dv_profile == 7)
           {
             m_bitstream->SetConvertDovi(true);
             hint.dovi.dv_profile = 8;
@@ -829,7 +829,7 @@ void CMediaPipelineWebOS::SetupBitstreamConverter(CDVDStreamInfo& hint)
               isDvhe = true;
           }
 
-          if (m_removeDovi && (isDvhe || isDvh1))
+          if (removeDovi && (isDvhe || isDvh1))
             hint.hdrType = StreamHdrType::HDR_TYPE_HDR10;
         }
       }
