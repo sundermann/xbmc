@@ -737,12 +737,10 @@ std::string CMediaPipelineWebOS::SetupAudio(CDVDStreamInfo& audioHint, CVariant&
     CDVDCodecOptions options;
     m_audioCodec->Open(audioHint, options);
     m_audioEncoder = std::make_unique<CAEEncoderFFmpeg>();
-  }
-  else
-  {
-    codecName = ms_codecMap.at(audioHint.codec);
+    return codecName;
   }
 
+  codecName = ms_codecMap.at(audioHint.codec);
   if (audioHint.codec == AV_CODEC_ID_EAC3)
   {
     optInfo["ac3PlusInfo"]["channels"] = audioHint.channels;
