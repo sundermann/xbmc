@@ -79,7 +79,7 @@ bool COSScreenSaverWebOS::OnScreenSaverAboutToStart(LSHandle* sh, LSMessage* rep
 
   CVariant response;
   response["clientName"] = CCompileInfo::GetPackage();
-  response["ack"] = false;
+  response["ack"] = true;
   response["timestamp"] = request["timestamp"];
   std::string payload;
   CJSONVariantWriter::Write(response, payload, true);
