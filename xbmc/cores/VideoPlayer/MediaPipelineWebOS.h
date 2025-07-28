@@ -36,6 +36,28 @@ class CDVDOverlayContainer;
 class CDVDAudioCodec;
 class StarfishMediaAPIs;
 
+struct CustomPipelineGstreamer
+{
+  void* pipeline; // +1492
+  void* videoSrc;
+  int videoBufferSettings[4];
+  void* audioSrc;
+  int audioBufferSettings[4];
+  void* videoQueue;
+  void* videoDecoder;
+  void* videoParse;
+  void* videoSink;
+  void* videoSinkQueue;
+  void* audioQueue;
+  void* audioDecoder;
+  void* audioReformatter;
+  void* audioParse;
+  void* audioSink;
+  void* audioSinkQueue;
+  void* audioResampler;
+  void* audioConverter;
+};
+
 /**
  * @class CMediaPipelineWebOS
  * @brief WebOS media pipeline for audio/video playback.
@@ -345,9 +367,12 @@ private:
   static void AcbCallback(
       long acbId, long taskId, long eventType, long appState, long playState, const char* reply);
 
+  bool FindGStreamerElements();
+
   std::condition_variable m_eventCondition;
   std::mutex m_eventMutex;
 
+  CustomPipelineGstreamer* m_pipeline{nullptr};
   unsigned int m_webOSVersion{4};
   std::atomic<bool> m_stalled{false};
   std::atomic<bool> m_loaded{false};

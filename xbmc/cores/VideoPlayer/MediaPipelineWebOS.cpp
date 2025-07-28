@@ -45,6 +45,7 @@
 #include <vector>
 
 #include <appswitching-control-block/AcbAPI.h>
+#include <dlfcn.h>
 #include <player-factory/custompipeline.hpp>
 #include <player-factory/customplayer.hpp>
 #include <starfish-media-pipeline/StarfishMediaAPIs.h>
@@ -216,7 +217,27 @@ int CMediaPipelineWebOS::GetVideoBitrate() const
 
 void CMediaPipelineWebOS::UpdateAudioInfo()
 {
-  int level = std::min(99, m_messageQueueAudio.GetLevel());
+  static void* gobject = dlopen("libgobject-2.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
+  using GObjectGetFunc = void (*)(void*, const char*, ...);
+  static auto g_object_get = reinterpret_cast<GObjectGetFunc>(dlsym(gobject, "g_object_get"));
+
+  uint64_t queuedSrcBytes = 0;
+  uint32_t queuedBytes = 0;
+  uint32_t queuedSinkBytes = 0;
+  uint64_t maxQueuedSrcBytes = 0;
+  uint32_t maxQueuedBytes = 0;
+  uint32_t maxQueuedSinkBytes = 0;
+
+  g_object_get(m_pipeline->audioQueue, "current-level-bytes", &queuedBytes, nullptr);
+  g_object_get(m_pipeline->audioSrc, "current-level-bytes", &queuedSrcBytes, nullptr);
+  g_object_get(m_pipeline->audioSinkQueue, "current-level-bytes", &queuedSinkBytes, nullptr);
+  g_object_get(m_pipeline->audioQueue, "max-size-bytes", &maxQueuedBytes, nullptr);
+  g_object_get(m_pipeline->audioSrc, "max-bytes", &maxQueuedSrcBytes, nullptr);
+  g_object_get(m_pipeline->audioSinkQueue, "max-size-bytes", &maxQueuedSinkBytes, nullptr);
+  CLog::LogF(LOGDEBUG, "audio queuedBytes: {} {} {}", maxQueuedBytes, maxQueuedSrcBytes, maxQueuedSinkBytes);
+  int level = (100*(m_messageQueueVideo.GetDataSize() + queuedBytes + queuedSinkBytes +
+              queuedSrcBytes)) / (maxQueuedBytes + maxQueuedSinkBytes + maxQueuedSrcBytes + m_messageQueueVideo.GetMaxDataSize());
+
   double kb = m_messageQueueAudio.GetDataSize() / 1024.0;
   double ts = m_messageQueueAudio.GetTimeSize();
   double kbps = m_audioStats.GetBitrate() / 1024.0;
@@ -428,12 +449,39 @@ bool CMediaPipelineWebOS::AcceptsVideoData() const
 
 bool CMediaPipelineWebOS::HasAudioData() const
 {
-  return !m_eos;
+  static void* gobject = dlopen("libgobject-2.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
+  using GObjectGetFunc = void (*)(void*, const char*, ...);
+  static auto g_object_get = reinterpret_cast<GObjectGetFunc>(dlsym(gobject, "g_object_get"));
+
+  uint64_t queuedSrcBytes = 0;
+  uint32_t queuedBytes = 0;
+  uint32_t queuedSinkBytes = 0;
+  if (m_pipeline->audioQueue)
+    g_object_get(m_pipeline->audioQueue, "current-level-bytes", &queuedBytes, nullptr);
+  if (m_pipeline->audioSrc)
+    g_object_get(m_pipeline->audioSrc, "current-level-bytes", &queuedSrcBytes, nullptr);
+  if (m_pipeline->audioSinkQueue)
+    g_object_get(m_pipeline->audioSinkQueue, "current-level-bytes", &queuedSinkBytes, nullptr);
+  CLog::LogF(LOGDEBUG, "audio queuedBytes: {} {} {}", queuedBytes, queuedSrcBytes, queuedSinkBytes);
+
+  return (m_messageQueueAudio.GetDataSize() + queuedBytes + queuedSinkBytes + queuedSrcBytes > 0);
 }
 
 bool CMediaPipelineWebOS::HasVideoData() const
 {
-  return !m_eos;
+  static void* gobject = dlopen("libgobject-2.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
+  using GObjectGetFunc = void (*)(void*, const char*, ...);
+  static auto g_object_get = reinterpret_cast<GObjectGetFunc>(dlsym(gobject, "g_object_get"));
+
+  uint64_t queuedSrcBytes = 0;
+  uint32_t queuedBytes = 0;
+  uint32_t queuedSinkBytes = 0;
+  g_object_get(m_pipeline->videoQueue, "current-level-bytes", &queuedBytes, nullptr);
+  g_object_get(m_pipeline->videoSrc, "current-level-bytes", &queuedSrcBytes, nullptr);
+  g_object_get(m_pipeline->videoSinkQueue, "current-level-bytes", &queuedSinkBytes, nullptr);
+  CLog::LogF(LOGDEBUG, "video queuedBytes: {} {} {}", queuedBytes, queuedSrcBytes, queuedSinkBytes);
+
+  return (m_messageQueueVideo.GetDataSize() + queuedBytes + queuedSinkBytes + queuedSrcBytes > 0);
 }
 
 bool CMediaPipelineWebOS::IsAudioInited() const
@@ -464,7 +512,7 @@ void CMediaPipelineWebOS::SendAudioMessage(const std::shared_ptr<CDVDMsg>& msg, 
 void CMediaPipelineWebOS::SendVideoMessage(const std::shared_ptr<CDVDMsg>& msg, const int priority)
 {
   m_messageQueueVideo.Put(msg, priority);
-  m_processInfo.SetLevelVQ(m_messageQueueVideo.GetLevel());
+  //m_processInfo.SetLevelVQ(m_messageQueueVideo.GetLevel());
 }
 
 void CMediaPipelineWebOS::SetSpeed(const int speed)
@@ -1043,7 +1091,7 @@ void CMediaPipelineWebOS::FeedVideoData(const std::shared_ptr<CDVDMsg>& msg)
     {
       m_videoStats.AddSampleBytes(packet->iSize);
       UpdateVideoInfo();
-      m_processInfo.SetLevelVQ(m_messageQueueVideo.GetLevel());
+      //m_processInfo.SetLevelVQ(m_messageQueueVideo.GetLevel());
       return;
     }
 
@@ -1257,11 +1305,34 @@ void CMediaPipelineWebOS::PlayerCallback(int32_t type, const int64_t numValue, c
   if (m_webOSVersion < 5 && type > PF_EVENT_TYPE_STR_STATE_UPDATE__ENDOFSTREAM)
     type += 2;
 
+  static void* gobject = dlopen("libgobject-2.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
+  using GObjectGetFunc = void (*)(void*, const char*, ...);
+  static auto g_object_get = reinterpret_cast<GObjectGetFunc>(dlsym(gobject, "g_object_get"));
+
   const std::unique_ptr<AcbHandle>& acb = buffer->GetAcbHandle();
   switch (type)
   {
     case PF_EVENT_TYPE_FRAMEREADY:
     {
+      uint64_t queuedSrcBytes = 0;
+      uint32_t queuedBytes = 0;
+      uint32_t queuedSinkBytes = 0;
+      uint64_t maxQueuedSrcBytes = 0;
+      uint32_t maxQueuedBytes = 0;
+      uint32_t maxQueuedSinkBytes = 0;
+
+      g_object_get(m_pipeline->videoQueue, "current-level-bytes", &queuedBytes, nullptr);
+      g_object_get(m_pipeline->videoSrc, "current-level-bytes", &queuedSrcBytes, nullptr);
+      g_object_get(m_pipeline->videoSinkQueue, "current-level-bytes", &queuedSinkBytes, nullptr);
+      g_object_get(m_pipeline->videoQueue, "max-size-bytes", &maxQueuedBytes, nullptr);
+      g_object_get(m_pipeline->videoSrc, "max-bytes", &maxQueuedSrcBytes, nullptr);
+      g_object_get(m_pipeline->videoSinkQueue, "max-size-bytes", &maxQueuedSinkBytes, nullptr);
+      CLog::LogF(LOGINFO, "video queuedBytes: {} {} {}", maxQueuedBytes, maxQueuedSrcBytes, maxQueuedSinkBytes);
+      int level = (100*(m_messageQueueVideo.GetDataSize() + queuedBytes + queuedSinkBytes +
+                  queuedSrcBytes)) / (maxQueuedBytes + maxQueuedSinkBytes + maxQueuedSrcBytes + m_messageQueueVideo.GetMaxDataSize());
+
+      m_processInfo.SetLevelVQ(level);
+
       m_pts = std::chrono::nanoseconds(numValue);
       const double pts = GetCurrentPts();
       ProcessOverlays(pts);
@@ -1292,6 +1363,7 @@ void CMediaPipelineWebOS::PlayerCallback(int32_t type, const int64_t numValue, c
         CLog::LogF(LOGERROR, "Failed to play");
       m_loaded = true;
       m_flushed = true;
+      FindGStreamerElements();
       Create();
       m_audioThread = std::thread([this] { ProcessAudio(); });
       break;
@@ -1367,4 +1439,26 @@ void CMediaPipelineWebOS::PlayerCallback(const int32_t type,
                                          void* data)
 {
   static_cast<CMediaPipelineWebOS*>(data)->PlayerCallback(type, numValue, strValue);
+}
+
+bool CMediaPipelineWebOS::FindGStreamerElements()
+{
+  const auto player = static_cast<mediapipeline::CustomPlayer*>(m_mediaAPIs->player.get());
+  const auto pipeline = static_cast<mediapipeline::CustomPipeline*>(player->getPipeline().get());
+
+  const auto memory = reinterpret_cast<uint8_t*>(pipeline);
+  constexpr uint32_t target[4] = {0, MIN_SRC_BUFFER_LEVEL_VIDEO, MAX_SRC_BUFFER_LEVEL_VIDEO, MIN_BUFFER_LEVEL};
+
+  for(int i = 0; i < 2048; ++i)
+  {
+    if (std::memcmp(memory + i, target, sizeof(target)) == 0)
+    {
+      CLog::Log(LOGDEBUG, "Found gstreamer memory at offset {}", i);
+      m_pipeline = reinterpret_cast<CustomPipelineGstreamer*>(
+        memory + i - offsetof(CustomPipelineGstreamer, videoBufferSettings));
+      return true;
+    }
+  }
+
+  return false;
 }
