@@ -182,6 +182,8 @@ endif()
 
 if("webos" IN_LIST CORE_PLATFORM_NAME_LC)
   set(ENABLE_OPTICAL OFF CACHE BOOL "" FORCE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 endif ()
 
 # Architecture endianness detector
