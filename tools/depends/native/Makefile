@@ -15,6 +15,7 @@ NATIVE= \
   gettext \
   giflib \
   heimdal \
+  libiconv \
   libjpeg-turbo \
   liblzo2 \
   libpng \
