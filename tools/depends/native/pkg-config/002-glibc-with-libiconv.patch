@@ -1,0 +1,11 @@
+--- a/glib/configure.ac
++++ b/glib/configure.ac
+@@ -400,7 +400,7 @@
+   AC_ARG_WITH(libiconv,
+ 	      [AS_HELP_STRING([--with-libiconv=@<:@no/gnu/native@:>@],
+ 			      [use the libiconv library])],,
+-	      [with_libiconv=maybe])
++	      [with_libiconv=yes])
+ 
+   found_iconv=no
+   case $with_libiconv in

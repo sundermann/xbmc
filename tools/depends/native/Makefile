@@ -86,10 +86,12 @@ libjpeg-turbo: cmake nasm
 libpng: zlib automake
 libtool: automake
 Mako: MarkupSafe
+m4: libiconv
 meson: python3 pythonmodule-setuptools
 ninja: meson
 openssl: zlib
 pcre2: cmake
+pkg-config: automake libiconv
 pugixml: cmake
 python3: $(EXPAT) $(LIBFFI) pkg-config zlib openssl autoconf-archive
 pythonmodule-setuptools: python3
@@ -97,7 +99,7 @@ swig: bison cmake pcre2
 tar: xz automake
 TexturePacker: cmake libpng liblzo2 giflib libjpeg-turbo
 wayland-scanner: expat ninja pkg-config
-waylandpp-scanner: cmake pugixml
+waylandpp-scanner: cmake pkg-config pugixml
 
 # python installs are not thread safe when using easy_install method.
 # MarkupSafe doesn't really depend on ninja but we need to make the
