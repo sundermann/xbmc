@@ -576,9 +576,12 @@ std::shared_ptr<COverlay> CRenderer::Convert(CDVDOverlay& o, double pts)
   else if (o.IsOverlayType(DVDOVERLAY_TYPE_SPU))
     r = COverlay::Create(static_cast<CDVDOverlaySpu&>(o));
 
-  m_textureCache[m_textureid] = r;
-  o.m_textureid = m_textureid;
-  m_textureid++;
+  if (r)
+  {
+    o.m_textureid = m_textureid;
+    m_textureCache[m_textureid] = r;
+    m_textureid++;
+  }
 
   return r;
 }
