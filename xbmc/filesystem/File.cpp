@@ -424,6 +424,10 @@ bool CFile::OpenForWrite(const CURL& file, bool bOverWrite)
     return false;
   }
   XBMCCOMMONS_HANDLE_UNCHECKED
+  catch (const std::exception& e)
+  {
+    CLog::Log(LOGERROR, "{} - Unhandled exception opening {}: {}", __FUNCTION__, file.GetRedacted(), e.what());
+  }
   catch(...)
   {
     CLog::Log(LOGERROR, "{} - Unhandled exception opening {}", __FUNCTION__, file.GetRedacted());
