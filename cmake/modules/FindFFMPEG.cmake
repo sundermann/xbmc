@@ -191,6 +191,10 @@ macro(buildFFMPEG)
                                 ${CMAKE_SOURCE_DIR}/tools/depends/target/ffmpeg/001-ffmpeg-all-libpostproc-plugin.patch
                                 <SOURCE_DIR>)
 
+      list(APPEND PATCH_COMMAND COMMAND ${CMAKE_COMMAND} -E copy
+              ${CMAKE_SOURCE_DIR}/tools/depends/target/ffmpeg/007-ffmpeg-all-add-eac3-dependent-substream.patch
+              <SOURCE_DIR>)
+
       set(postproc_pkg_config_search "postproc=`PKG_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libpostproc`")
     endif()
 

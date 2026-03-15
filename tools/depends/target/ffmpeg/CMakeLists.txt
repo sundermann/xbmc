@@ -152,7 +152,10 @@ if(CMAKE_GENERATOR STREQUAL Ninja)
 endif()
 
 if(NOT DISABLE_FFMPEG_SOURCE_PLUGINS)
-  set(sourceplugin_patch PATCH_COMMAND /bin/sh -c "patch -p1 -i <SOURCE_DIR>/001-ffmpeg-all-libpostproc-plugin.patch && patch -p1 -i <SOURCE_DIR>/002-ffmpeg-libavutil-common-h-cpp11-constant-macros.patch")
+  set(sourceplugin_patch PATCH_COMMAND COMMAND patch -p1 -i <SOURCE_DIR>/001-ffmpeg-all-libpostproc-plugin.patch
+          COMMAND patch -p1 -i <SOURCE_DIR>/002-ffmpeg-libavutil-common-h-cpp11-constant-macros.patch
+          COMMAND patch -p1 -i <SOURCE_DIR>/007-ffmpeg-all-add-eac3-dependent-substream.patch
+  )
 else()
   set(sourceplugin_patch PATCH_COMMAND patch -p1 -i <SOURCE_DIR>/002-ffmpeg-libavutil-common-h-cpp11-constant-macros.patch)
 endif()
