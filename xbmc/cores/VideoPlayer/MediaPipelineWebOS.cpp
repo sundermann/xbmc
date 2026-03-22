@@ -163,6 +163,40 @@ unsigned int ParseAACSampleRate(const uint8_t* data, const size_t size)
 
   return sampleRate;
 }
+
+CAEChannelInfo GetAudioOutputChannelLayout()
+{
+  const int channels = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+      CSettings::SETTING_AUDIOOUTPUT_CHANNELS);
+  switch (channels)
+  {
+    case 0:
+      return AE_CH_LAYOUT_2_0;
+    case 1:
+      return AE_CH_LAYOUT_2_0;
+    case 2:
+      return AE_CH_LAYOUT_2_1;
+    case 3:
+      return AE_CH_LAYOUT_3_0;
+    case 4:
+      return AE_CH_LAYOUT_3_1;
+    case 5:
+      return AE_CH_LAYOUT_4_0;
+    case 6:
+      return AE_CH_LAYOUT_4_1;
+    case 7:
+      return AE_CH_LAYOUT_5_0;
+    case 8:
+      return AE_CH_LAYOUT_5_1;
+    case 9:
+      return AE_CH_LAYOUT_7_0;
+    case 10:
+      return AE_CH_LAYOUT_7_1;
+    default:
+      CLog::LogF(LOGWARNING, "Unsupported channel count {}, defaulting to stereo", channels);
+      return AE_CH_LAYOUT_2_0;
+  }
+}
 } // namespace
 
 CMediaPipelineWebOS::CMediaPipelineWebOS(CProcessInfo& processInfo,
@@ -1390,6 +1424,7 @@ void CMediaPipelineWebOS::ProcessAudio()
               AEAudioFormat dstFormat = m_audioCodec->GetFormat();
               dstFormat.m_sampleRate = SelectTranscodingSampleRate(dstFormat.m_sampleRate);
               dstFormat.m_dataFormat = AE_FMT_FLOATP;
+              dstFormat.m_channelLayout = GetAudioOutputChannelLayout();
               dstFormat.m_streamInfo.m_type = WebOSTVPlatformConfig::SupportsEAC3()
                                                   ? CAEStreamInfo::DataType::STREAM_TYPE_EAC3
                                                   : CAEStreamInfo::DataType::STREAM_TYPE_AC3;
