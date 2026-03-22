@@ -22,6 +22,11 @@
   </section>
   <section id="system">
     <category id="audio">
+      <group id="1">
+        <setting id="audiooutput.channels">
+          <default>10</default>
+        </setting>
+      </group>
       <group id="3">
         <setting id="audiooutput.passthrough">
           <default>true</default>
