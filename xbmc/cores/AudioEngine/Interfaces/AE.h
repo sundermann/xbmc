@@ -129,6 +129,17 @@ public:
   virtual bool IsSuspended() {return true;}
 
   /*!
+   * \brief Reserve the audio device for an external media pipeline
+   *
+   * While reserved the engine discards its output instead of writing it to the device.
+   * Unlike Suspend() it stays configured and running. On true the device has been released.
+   *
+   * \param reserve True to release the device, false to hand it back to the engine
+   * \return True if the request was handled by the engine
+   */
+  virtual bool ReserveSink(bool reserve) { return false; }
+
+  /*!
    * \brief Returns the current master volume level of the AudioEngine
    *
    * \return The volume level between 0.0 and 1.0

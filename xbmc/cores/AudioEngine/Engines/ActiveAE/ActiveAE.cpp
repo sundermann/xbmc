@@ -393,6 +393,21 @@ void CActiveAE::StateMachine(int signal, Protocol *port, Message *msg)
         case CActiveAEControlProtocol::APPFOCUSED:
           m_sink.m_controlPort.SendOutMessage(CSinkControlProtocol::APPFOCUSED, msg->data, sizeof(bool));
           return;
+        case CActiveAEControlProtocol::RESERVESINK:
+        {
+          Message* sinkReply = nullptr;
+          bool success = false;
+          if (m_sink.m_controlPort.SendOutMessageSync(CSinkControlProtocol::RESERVE, &sinkReply, 1s,
+                                                      msg->data, sizeof(bool)))
+          {
+            success = sinkReply->signal == CSinkControlProtocol::ACC;
+            sinkReply->Release();
+          }
+          if (!success)
+            CLog::LogF(LOGERROR, "sink failed to handle reserve request");
+          msg->Reply(success ? CActiveAEControlProtocol::ACC : CActiveAEControlProtocol::ERR);
+          return;
+        }
         case CActiveAEControlProtocol::STREAMRESAMPLEMODE:
           MsgStreamParameter *par;
           par = reinterpret_cast<MsgStreamParameter*>(msg->data);
@@ -3092,6 +3107,21 @@ bool CActiveAE::Resume()
 bool CActiveAE::IsSuspended()
 {
   return m_stats.IsSuspended();
+}
+
+bool CActiveAE::ReserveSink(bool reserve)
+{
+  Message* reply = nullptr;
+  if (!m_controlPort.SendOutMessageSync(CActiveAEControlProtocol::RESERVESINK, &reply, 2s, &reserve,
+                                        sizeof(bool)))
+  {
+    CLog::LogF(LOGERROR, "timed out");
+    return false;
+  }
+
+  const bool success = reply->signal == CActiveAEControlProtocol::ACC;
+  reply->Release();
+  return success;
 }
 
 float CActiveAE::GetVolume()

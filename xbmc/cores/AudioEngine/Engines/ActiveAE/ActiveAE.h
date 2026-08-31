@@ -100,6 +100,7 @@ public:
     DISPLAYRESET,
     APPFOCUSED,
     KEEPCONFIG,
+    RESERVESINK,
     TIMEOUT,
   };
   enum InSignal
@@ -244,6 +245,7 @@ public:
   bool Suspend() override;
   bool Resume() override;
   bool IsSuspended() override;
+  bool ReserveSink(bool reserve) override;
   void OnSettingsChange();
 
   float GetVolume() override;
