@@ -377,18 +377,17 @@ bool CMediaPipelineWebOS::OpenVideoStream(CDVDStreamInfo hint)
       m_processInfo.SetVideoInterlaced(hint.interlaced);
       m_processInfo.SetVideoDimensions(hint.width, hint.height);
       m_processInfo.SetVideoDAR(static_cast<float>(hint.aspect));
-      double fps = 0.0;
       if (m_videoHint.fpsrate && m_videoHint.fpsscale)
       {
-        fps = static_cast<double>(hint.fpsrate) / static_cast<double>(hint.fpsscale);
-        m_processInfo.SetVideoFps(static_cast<float>(fps));
+        m_processInfo.SetVideoFps(static_cast<float>(hint.fpsrate) /
+                                  static_cast<float>(hint.fpsscale));
       }
       else
       {
         m_processInfo.SetVideoFps(1.0);
       }
 
-      return ConfigureRenderer(hint, fps);
+      return true;
     }
 
     // Different codec => unload the current stream
