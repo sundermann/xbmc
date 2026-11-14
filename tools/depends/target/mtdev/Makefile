@@ -3,10 +3,10 @@ DEPS =../../Makefile.include Makefile ../../download-files.include
 
 # lib name, version
 LIBNAME=mtdev
-VERSION=1.1.5
+VERSION=1.1.7
 SOURCE=$(LIBNAME)-$(VERSION)
 ARCHIVE=$(SOURCE).tar.bz2
-SHA512=78477a4af784e3f846df867f1428ffdc458e3ff33d465d45a84247a7e52f0e215cace397d72be64f6e641f07e0b97a930eff0e07fe9507e0138fb028a4037d6d
+SHA512=e6174a38cf67a7f12a3b91e4e27bf74a18d6b40a956950ebb748b0ff87092333daa07e647b26038a5a533f8c48e845d649848e6ba99ea009ab87fd96ed188152
 include ../../download-files.include
 
 # configuration settings
