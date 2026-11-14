@@ -6,7 +6,7 @@ CONFIGURE=cp -f $(CONFIG_SUB) $(CONFIG_GUESS) build-aux/; \
     ./configure --prefix=$(PREFIX) \
     --disable-csharp --disable-native-java --disable-java --without-emacs \
     --disable-libasprintf --disable-openmp \
-    --with-included-gettext \
+    --with-included-libintl \
     --with-included-glib \
     --with-included-libcroco \
     --with-included-libxml \
