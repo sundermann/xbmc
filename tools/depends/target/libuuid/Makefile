@@ -4,10 +4,10 @@ DEPS = ../../Makefile.include Makefile ../../download-files.include
 # We use uuid from e2fsprogs for legacy. util-linux works fine on android now
 # lib name, version
 LIBNAME=libuuid
-VERSION=1.46.5
+VERSION=1.47.4
 SOURCE=e2fsprogs-$(VERSION)
 ARCHIVE=$(SOURCE).tar.xz
-SHA512=53282e1c524f62a95012b1aceef296d494f5238c82c9b08b29fbe6a803dbf7ccfdcd9124eb2f11fe2ff9de26387c78751a92c3217ca414f6db6242098a72d3fa
+SHA512=c316ce38d73786fb45b3728cd31991fe81b14a1e61dae645f3471c3f35983c4394e4606b47194c3e607897b7ae5a5ef1d376adb204383afa8c4219db8617d970
 include ../../download-files.include
 
 LIBDYLIB=$(PLATFORM)/lib/$(LIBNAME).a
