@@ -3,10 +3,10 @@ DEPS =../../Makefile.include Makefile ../../download-files.include
 
 # lib name, version
 LIBNAME=libudev
-VERSION=3.2.5
+VERSION=3.3.0
 SOURCE=$(LIBNAME)-$(VERSION)
 ARCHIVE=$(SOURCE).tar.gz
-SHA512=bc3dbe847a36dedbb2617c9fe123aa8d66adb0ab731a447a2dae4dff8031a09a0df10fac5cf85c6c4818f46f106336ead54620af0bb86c01a0a31dbda129a8f7
+SHA512=f36529fe9579ce23fed7565640afeed1577c8aaeaa7df84cdd7e63ef153d737364fcd3f4b304c0609103cd73203914c050df311df5a2b7d8c04f69cf40c24d3a
 include ../../download-files.include
 
 # configuration settings
